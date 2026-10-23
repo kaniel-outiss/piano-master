@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v78 — MIDI Edition</title>
+    <title>Piano Master v79 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -55659,6 +55659,11 @@ const PM_HN_NOM = ['Do', 'Do♯', 'Ré', 'Mi♭', 'Mi', 'Fa', 'Fa♯', 'Sol', 'L
 const PMHN = { id: null, num: 0, main: null, ex: null, seq: null, fgMG: null,
                ptr: 0, ok: 0, err: 0, passes: 0, badAt: -1, pend: null, lastOkMs: 0 };
 
+// v79 — deux modes : « 📖 Motif » (défaut) = les cellules montante et descendante, fixes,
+// sans aucun contrôle des notes ; « 🎯 Contrôle » = le suivi note par note d'avant.
+function pmHnMode() { try { return localStorage.getItem('pm_hn_mode') === 'ctrl' ? 'ctrl' : 'motif'; } catch (e) { return 'motif'; } }
+function pmHnSetMode(m) { try { localStorage.setItem('pm_hn_mode', m); } catch (e) {} pmHnReset(); pmHnRender(); }
+window.pmHnSetMode = pmHnSetMode;
 function pmHnLen() { try { return localStorage.getItem(PM_HN_LEN_KEY) || '13'; } catch (e) { return '13'; } }
 function pmHnSetLen(v) {
   try { localStorage.setItem(PM_HN_LEN_KEY, v); } catch (e) {}
@@ -55676,6 +55681,8 @@ function pmHnSync(forceId) {
   const m = id && /^hanon_(\d+)_(mg|md|me)$/.exec(id);
   if (!m) { PMHN.id = null; pmHnRender(); return; }
   if (id !== PMHN.id) {
+    if (PMHN.demo && PMHN.demo.t) clearTimeout(PMHN.demo.t);
+    PMHN.demo = null;
     PMHN.id = id; PMHN.num = +m[1]; PMHN.main = m[2];
     PMHN.ex = PM_HN_DATA.find(h => h.n === PMHN.num) || null;
     pmHnReset();
@@ -55690,6 +55697,7 @@ function pmHnSync(forceId) {
 
 // Pourcentage de notes justes de l'essai en cours — null sous le seuil
 function pmHnAttemptPct(id) {
+  if (pmHnMode() !== 'ctrl') return null;      // Motif : la précision ne repose que sur le rythme
   if (!PMHN.seq || id !== PMHN.id) return null;
   const n = PMHN.ok + PMHN.err;
   if (n < PM_HN_MIN_JUGES) return null;
@@ -55704,6 +55712,7 @@ function _pmHnAvance() {
 }
 
 function pmHnOnNote(midi) {
+  if (pmHnMode() !== 'ctrl') return;           // Motif : tes notes ne sont pas contrôlées
   if (!PMHN.seq || typeof midi !== 'number') return;
   if (!document.getElementById('pm-hn-panel')) pmHnRender();
   const N = PMHN.seq.notes, pc = midi % 12, exp = N[PMHN.ptr] % 12;
@@ -55863,6 +55872,58 @@ function pmStfDraw(cols,o){
 // Portée Hanon : une fenêtre de 8 notes qui suit le pointeur, dessinée par le
 // moteur Garden. Clé choisie par Garden selon le registre ; en ME les deux mains
 // sont écrites (octave), en grande portée quand le registre l'exige.
+// Les deux cellules du livre, dans le même registre : la 1re mesure montante (sur la
+// tonique) et la DERNIÈRE mesure descendante (celle qui revient à la tonique).
+// MD clé de sol dès Do 4, MG clé de fa dès Do 3 ; doigtés au-dessus de chaque main.
+function pmHnMotifCols(cell) {
+  const ex = PMHN.ex, up = cell === 'a';
+  const deg = up ? ex.a : ex.d, fMD = up ? ex.fa : ex.fd, fMG = up ? ex.la : ex.ld;
+  const hands = PMHN.main === 'me' ? ['MD', 'MG'] : [PMHN.main === 'mg' ? 'MG' : 'MD'];
+  return deg.map(function (x, i) {
+    return { cell: cell, i: i, notes: hands.map(function (h) {
+      const f = (h === 'MG' ? fMG : fMD) || [];
+      return { m: (h === 'MG' ? 48 : 60) + pmHnDeg(x), hand: h, col: up ? '#3ECF8E' : '#4F9EFF', lb: f[i] != null ? f[i] : null };
+    }) };
+  });
+}
+// cells : ['a'], ['d'] ou ['a','d'] (une seule portée, barre entre les deux)
+function pmHnMotifSvg(cells) {
+  let cols = [];
+  cells.forEach(function (c, k) {
+    const cc = pmHnMotifCols(c);
+    cc[0].lb = c === 'a' ? '↗' : '↘';
+    if (k < cells.length - 1) cc[cc.length - 1].bar = 2;
+    cols = cols.concat(cc);
+  });
+  const D = PMHN.demo;
+  cols.forEach(function (c) {
+    const on = D && D.cell === c.cell && D.i === c.i;
+    c.notes.forEach(function (n) { if (on) n.col = '#F5C842'; });
+    c.wf = cols.length > 8 ? 0.42 : 0.55;
+  });
+  return pmStfDraw(cols, { sp: 9, key: 0, ks: true });
+}
+// 🔊 écoute des motifs : au tempo du métronome, en doubles-croches (4 notes par temps)
+function pmHnDemo(which) {
+  if (PMHN.demo && PMHN.demo.t) { clearTimeout(PMHN.demo.t); PMHN.demo = null; pmHnRender(); if (which === 'stop') return; }
+  if (!PMHN.ex || which === 'stop') return;
+  try { if (typeof initAudio === 'function') initAudio(); } catch (e) {}
+  const order = which === 'ad' ? ['a', 'd'] : [which];
+  const steps = []; order.forEach(function (c) { pmHnMotifCols(c).forEach(function (col) { steps.push(col); }); });
+  let bpm = 80; try { bpm = Math.round(MT.tempoCurrent || MT.tempoStart || 80); } catch (e) {}
+  const ms = Math.max(110, Math.round(60000 / bpm / 4));
+  let k = 0;
+  const tick = function () {
+    if (k >= steps.length || !document.getElementById('pm-hn-panel')) { PMHN.demo = null; pmHnRender(); return; }
+    const st = steps[k++];
+    PMHN.demo = { cell: st.cell, i: st.i, t: null, w: which };
+    try { st.notes.forEach(function (n) { playNote(PM_NNS[n.m % 12], Math.floor(n.m / 12) - 1, 0.6); }); } catch (e) {}
+    pmHnRender();
+    PMHN.demo.t = setTimeout(tick, ms);
+  };
+  tick();
+}
+window.pmHnDemo = pmHnDemo;
 function pmHnSvg() {
   const N = PMHN.seq.notes, F = PMHN.seq.fg, L = PMHN.ex.a.length;
   const _pw = (document.getElementById('pm-hn-panel') || {}).clientWidth || 300;
@@ -55890,6 +55951,9 @@ function pmHnRender() {
   // Le cadran des paliers cède sa place à la portée tant qu'un Hanon est actif (pas de scroll)
   if (cad) cad.style.display = actif ? 'none' : 'block';
   if (cadSub) cadSub.style.display = actif ? 'none' : '';
+  // v79 — le cadran BPM se fait plus petit pendant un Hanon : place pour les deux portées
+  const hud = document.getElementById('pm-hud-bpm');
+  if (hud) { hud.style.width = actif ? '150px' : ''; hud.style.height = actif ? '150px' : ''; }
   if (!actif) { if (p) p.remove(); return; }
   if (!p) {
     const beats = document.getElementById('mt-beats-grid');
@@ -55905,6 +55969,26 @@ function pmHnRender() {
       + '</b> — notes pas encore encodées dans l’app (n° 1-31 seulement). Livre requis ; seuls le tempo et la régularité sont mesurés.</div>';
     return;
   }
+  const btnM = 'padding:2px 7px;font-size:9.5px;font-weight:700;border-radius:5px;cursor:pointer;';
+  const pill = function (on, js, t) { return '<button onclick="' + js + '" style="' + btnM + 'border:1px solid ' + (on ? 'var(--accent)' : 'var(--border)') + ';background:' + (on ? 'rgba(99,102,241,.18)' : 'transparent') + ';color:' + (on ? 'var(--accent)' : 'var(--text-muted)') + '">' + t + '</button>'; };
+  const modeBar = pill(pmHnMode() === 'motif', "pmHnSetMode('motif')", '📖') .replace('<button ', '<button title="Motif : les deux cellules, sans contrôle" ')
+    + pill(pmHnMode() === 'ctrl', "pmHnSetMode('ctrl')", '🎯').replace('<button ', '<button title="Contrôle note par note" ');
+  if (pmHnMode() !== 'ctrl') {
+    const nUp = PMHN.ex.a.length, order1 = function (d) { return d && d.cell; };
+    p.innerHTML =
+      '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'
+      + '<span style="font-size:12px;font-weight:800;color:var(--text)">🎼 Hanon n°' + PMHN.num + ' · ' + lbMain + '</span>'
+      + '<span style="flex:1"></span>' + modeBar + '</div>'
+      + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:3px">'
+      + '<span style="font-size:9px;color:var(--text-dim)">🔊</span>'
+      + pill(PMHN.demo && PMHN.demo.w === 'a', "pmHnDemo('a')", '▶↗') + pill(PMHN.demo && PMHN.demo.w === 'd', "pmHnDemo('d')", '▶↘') + pill(PMHN.demo && PMHN.demo.w === 'ad', "pmHnDemo('ad')", '▶↗↘')
+      + (PMHN.demo ? pill(true, "pmHnDemo('stop')", '■') : '')
+      + '<span style="font-size:8.5px;color:var(--text-dim);margin-left:auto">' + nUp + ' notes/mes. · notes non contrôlées</span></div>'
+      + '<div style="font-size:9px;margin-top:2px"><b style="color:#3ECF8E">↗ ×13</b> <span style="color:var(--text-dim)">+1 degré/mesure</span> · <b style="color:#4F9EFF">↘ ×14</b> <span style="color:var(--text-dim)">depuis le haut → tonique</span></div>'
+      + pmHnMotifSvg(['a']) + pmHnMotifSvg(['d'])
+      + (PMHN.num === 31 ? '<div style="font-size:9px;color:#f5a623;margin-top:2px">⚠ N°31 (mouvement contraire) : encodage simplifié, à vérifier au clavier.</div>' : '');
+    return;
+  }
   // la faute en attente (position pas encore rejouée juste) compte déjà à l'écran
   const errV = PMHN.err + (PMHN.badAt === PMHN.ptr ? 1 : 0);
   const n = PMHN.ok + errV, pct = n ? Math.round(PMHN.ok / n * 100) : null;
@@ -55916,7 +56000,7 @@ function pmHnRender() {
   p.innerHTML =
     '<div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap">'
     + '<span style="font-size:12px;font-weight:800;color:var(--text)">🎼 Hanon n°' + PMHN.num + ' · ' + lbMain + '</span>'
-    + '<span style="font-size:9px;color:var(--text-dim)">Do maj. · mes. ' + Math.min(mes, tot) + '/' + tot + '</span></div>'
+    + '<span style="font-size:9px;color:var(--text-dim)">Do maj. · mes. ' + Math.min(mes, tot) + '/' + tot + '</span><span style="flex:1"></span>' + modeBar + '</div>'
     + '<div style="display:flex;align-items:center;gap:4px;margin:4px 0 2px">'
     + PM_HN_LEN.map(([v, l]) => '<button onclick="pmHnSetLen(\'' + v + '\')" style="' + btn + 'border:1px solid ' + (len === v ? 'var(--accent)' : 'var(--border)') + ';background:' + (len === v ? 'rgba(99,102,241,.18)' : 'transparent') + ';color:' + (len === v ? 'var(--accent)' : 'var(--text-muted)') + '">' + l + '</button>').join('')
     + '<button onclick="pmHnReset();pmHnRender()" title="Reprendre au début" style="' + btn + 'border:1px solid var(--border);background:transparent;color:var(--text-muted)">↺</button>'
