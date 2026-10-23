@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v71 — MIDI Edition</title>
+    <title>Piano Master v72 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -51330,6 +51330,7 @@ function rtRendreRepsTab() {
         '<div style="position:relative;z-index:1;padding:12px 14px">' +
           header +
           demoBar +
+          '<div id="rv-staff" style="margin:0 0 10px"></div>' +
           '<div id="rv-normal-view" style="display:'+normalDisplay+';gap:14px;align-items:flex-start">' +
             pianoCol +
             '<div id="rv-desc-col" style="flex:1;min-width:0;max-width:100%">' + descRight + '</div>' +
@@ -51511,6 +51512,8 @@ function rtRendreRepsTab() {
   html += monoBloc;
 
   root.innerHTML = html;
+  // v71 — portée d'illustration du skill sélectionné
+  if (monoBloc && typeof window.rvStaffRender === 'function') setTimeout(window.rvStaffRender, 0);
 
   if (window._rvExpanded) {
     var _t = document.getElementById('rv-top-band');
@@ -54500,6 +54503,7 @@ window.rvSyncExpanded = function() {
   }
 
   function highlightStep(idx) {
+    window._rvStfStep = idx; try { window.rvStaffRender && window.rvStaffRender(); } catch(e) {}
     var seq = _demoSeq;
     if (!seq || idx >= seq.length) return;
     var p = seq[idx];
@@ -54585,17 +54589,9 @@ window.rvSyncExpanded = function() {
     _demoTimer = setTimeout(runStep, getMsPerStep());
   }
 
-  window.rvDemoPlay = function() {
-    if (_demoPaused) {
-      _demoPaused = false;
-      setDemoUI(true);
-      runStep();
-      return;
-    }
-    var st = typeof window._rv_state === 'function' ? window._rv_state() : {};
-    var cat = st.cat || 'CAT06';
-
-    // CAT01 (Gammes) : construire la séquence note par note
+  // v71 — la séquence de la démo, sans effet de bord : rvDemoPlay ET la portée
+  // d'illustration (rvStaffRender) lisent la même source, donc montrent le même travail.
+  function _rvBuildSeq(st, cat) {
     if (cat === 'CAT01') {
       var tonRoot = (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C';
       var NS2=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -54616,7 +54612,7 @@ window.rvSyncExpanded = function() {
       });
       scaleSeq=scaleSeq.concat(descSeq);
       scaleSeq.push({note:NS2[ri3],octave:baseOct3,fn:'tonic'}); // tonique basse (une seule fois)
-      _demoSeq=scaleSeq.map(function(n){return {_noteOnly:n};});
+      return scaleSeq.map(function(n){return {_noteOnly:n};});
     } else if (cat === 'CAT02') {
       // Arpèges : notes une par une montée + descente
       var fam2=st.fam||'';
@@ -54641,13 +54637,28 @@ window.rvSyncExpanded = function() {
         var rootOctUp={note:rootNote2.note,octave:rootNote2.octave+1,fn:'tonic'};
         var down2=sorted2.slice(1).reverse(); // 3 notes descendantes (sans la tonique du bas)
         var arpSeq=sorted2.concat([rootOctUp]).concat(down2).concat([rootNote2]);
-        _demoSeq=arpSeq.map(function(n){return{_noteOnly:n};});
+        return arpSeq.map(function(n){return{_noteOnly:n};});
       } else {
-        _demoSeq=getDemoSeq();
+        return getDemoSeq();
       }
     } else {
-      _demoSeq = getDemoSeq();
+      return getDemoSeq();
     }
+
+  }
+
+  window.rvDemoPlay = function() {
+    if (_demoPaused) {
+      _demoPaused = false;
+      setDemoUI(true);
+      runStep();
+      return;
+    }
+    var st = typeof window._rv_state === 'function' ? window._rv_state() : {};
+    var cat = st.cat || 'CAT06';
+
+    // CAT01 (Gammes) : séquence note par note — construite par _rvBuildSeq
+    _demoSeq = _rvBuildSeq(st, cat);
 
     if (!_demoSeq.length) { console.warn('[DEMO] Séquence vide'); return; }
     _demoStep = 0;
@@ -54673,10 +54684,117 @@ window.rvSyncExpanded = function() {
     if (_demoTimer) { clearTimeout(_demoTimer); _demoTimer = null; }
     _demoStep   = 0;
     _demoPaused = false;
+    window._rvStfStep = -1; try { window.rvStaffRender && window.rvStaffRender(); } catch(e) {}
     setDemoUI(false);
     var play = document.getElementById('rv-demo-play');
     if (play) play.textContent = '▶ DÉMO';
     clearAllHighlights();
+  };
+
+  // ── 🎼 v71 — PORTÉE D'ILLUSTRATION DU SKILL ──────────────────────────────
+  // Montre le travail à faire (la séquence de la démo) avec le moteur de portée
+  // de Garden (pmStfDraw). Purement illustrative : aucune validation, rien n'est
+  // bloqué. Couleurs = celles du clavier (fonction de la note) ; pendant la
+  // démo, le pas joué est en or et les pas passés en vert.
+  var _RV_FN_COL = { tonic:'#93c5fd', root:'#fbbf24', mediant:'#fde047', dominant:'#fdba74',
+                     seventh:'#d8b4fe', extension:'#6ee7b7', ninth:'#6ee7b7', fourth:'#6ee7b7' };
+  var _RV_PC = { C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11 };
+  function _rvColsFromKeyboards() {
+    var src = document.getElementById('rv-panel-pianos');
+    if (!src) return [];
+    var out = [];
+    Array.prototype.forEach.call(src.querySelectorAll('.piano-keys'), function(kb) {
+      var notes = [];
+      Array.prototype.forEach.call(kb.querySelectorAll('[data-note][data-octave]'), function(k) {
+        var m = /active-([a-z]+)/.exec(k.className); if (!m) return;
+        var pc = _RV_PC[k.dataset.note]; if (pc == null) return;
+        notes.push({ m: (parseInt(k.dataset.octave) + 1) * 12 + pc, col: _RV_FN_COL[m[1]] || '#E8ECF5' });
+      });
+      if (!notes.length) return;
+      var lb = null, row = kb.parentNode;
+      for (var d = 0; d < 4 && row && row !== src && !lb; d++, row = row.parentNode) {
+        var f = row.firstElementChild;
+        if (f && !f.contains(kb)) {
+          var t = f.children.length ? Array.prototype.map.call(f.children, function(c){ return (c.textContent || '').trim(); }).filter(Boolean).join(' ')
+                                    : (f.textContent || '').trim();
+          if (t && t.length <= 12) lb = t;
+        }
+      }
+      out.push({ notes: notes, lb: lb, wf: 1, _i: out.length });
+    });
+    return out;
+  }
+
+  window.rvStaffRender = function() {
+    var el = document.getElementById('rv-staff');
+    if (!el) return;
+    try {
+      var st = typeof window._rv_state === 'function' ? window._rv_state() : null;
+      var cat = st && (st.cat || 'CAT06');
+      if (!st || !st.fam || cat === 'CAT12' || typeof pmStfDraw !== 'function') { el.innerHTML = ''; return; }
+      var tonRoot = (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C';
+      var seq = _rvBuildSeq(st, cat) || [];
+      var step = (typeof window._rvStfStep === 'number') ? window._rvStfStep : -1;
+      var cols = [];
+      seq.forEach(function(p, i) {
+        var ns = p._noteOnly ? [p._noteOnly] : getNotesForStep(p, tonRoot);
+        var notes = (ns || []).map(function(n) {
+          var pc = _RV_PC[n.note]; if (pc == null) return null;
+          var fn = n.fn || n['function'] || 'tonic';
+          var col = step < 0 ? (_RV_FN_COL[fn] || '#E8ECF5') : (i === step ? '#F5C842' : (i < step ? '#3ECF8E' : '#E8ECF5'));
+          return { m: (n.octave + 1) * 12 + pc, col: col };
+        }).filter(Boolean);
+        if (!notes.length) return;
+        var lb = (!p._noteOnly && p.lbl) ? String(p.lbl).split('\n')[0] : null;
+        cols.push({ notes: notes, lb: lb, wf: p._noteOnly ? 0.55 : 1, _i: i });
+      });
+      // Repli : familles sans entrée PROG (cadences, main gauche, voicings…) —
+      // dessinées par un bloc dédié de rvFillPanel. On lit ses claviers : une
+      // colonne par clavier, dans l'ordre, avec l'étiquette de la ligne.
+      // gamme à 7 sons : une lettre par degré (Do mineur harmonique = Mi♭ La♭ Si, pas Ré♯ Sol♯)
+      if (cols.length && seq.every(function(p){ return p._noteOnly; })) {
+        var pcs = []; cols.forEach(function(c){ var x = c.notes[0].m % 12; if (pcs.indexOf(x) < 0) pcs.push(x); });
+        if (pcs.length === 7) {
+          var r0 = _RV_PC[tonRoot] != null ? _RV_PC[tonRoot] : 0;
+          var RN = ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'][r0];
+          var NAT = [0,2,4,5,7,9,11], L0 = 'CDEFGAB'.indexOf(RN[0]);
+          var ord = pcs.slice().sort(function(a,b){ return ((a - r0 + 12) % 12) - ((b - r0 + 12) % 12); });
+          cols.forEach(function(c){ var n = c.notes[0], k = ord.indexOf(n.m % 12), li = (L0 + k) % 7;
+            var acc = ((n.m % 12) - NAT[li] + 18) % 12 - 6; if (Math.abs(acc) > 2) return;
+            var oct = Math.round((n.m - acc - NAT[li]) / 12) - 1;
+            n.sp = { step: oct * 7 + li, acc: ['♭♭','♭','','♯','♯♯'][acc + 2], nm: 'CDEFGAB'[li] + ['♭♭','♭','','♯','♯♯'][acc + 2] }; });
+        }
+      }
+      if (!cols.length) cols = _rvColsFromKeyboards();
+      // claviers pas encore construits (vue normale : rvFillPanel n'a pas tourné) —
+      // on les construit dans le conteneur caché, comme le fait ⤢ CLAVIERS ; une
+      // seule fois par skill (rvFillPanel rappelle rvStaffRender ensuite)
+      if (!cols.length && st.sel && window._rvStfFilled !== st.sel && typeof window.rvFillPanel === 'function') {
+        window._rvStfFilled = st.sel; window.rvFillPanel(st.sel); return;
+      }
+      // claviers construits mais notes posées en différé : on relit (8 × 300 ms max)
+      if (!cols.length) {
+        var _src = document.getElementById('rv-panel-pianos');
+        if (_src && _src.querySelector('.piano-keys')) {
+          if (window._rvStfRetry !== st.sel + '#8') {
+            var _n = (window._rvStfRetry || '').indexOf(st.sel + '#') === 0 ? parseInt(window._rvStfRetry.split('#').pop()) + 1 : 1;
+            window._rvStfRetry = st.sel + '#' + _n;
+            setTimeout(window.rvStaffRender, 300);
+          }
+        }
+        el.innerHTML = ''; return;
+      }
+      // longue séquence : une fenêtre de 16 pas qui suit la démo
+      if (cols.length > 16) {
+        var k = Math.max(0, cols.findIndex(function(c){ return c._i >= step; }));
+        var a = Math.min(Math.max(0, k - 4), cols.length - 16); cols = cols.slice(a, a + 16);
+      }
+      var key = _RV_PC[tonRoot] != null ? _RV_PC[tonRoot] : 0;
+      el.innerHTML = '<div style="background:#0c0f1a;border:1px solid var(--border);border-radius:8px;padding:4px 8px 2px">'
+        + '<div style="font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--text-dim);font-family:var(--font-mono)">🎼 LE TRAVAIL À FAIRE'
+        + (seq.length > cols.length ? ' · ' + seq.length + ' pas' : '') + '</div>'
+        + pmStfDraw(cols, { sp: 8, key: key, scale: 1.25 }) + '</div>';
+    } catch(e) { el.innerHTML = ''; }
   };
 
   // Stopper la démo si on change de famille
@@ -54688,6 +54806,7 @@ window.rvSyncExpanded = function() {
 })();
 
 window.rvFillPanel=function(skillId){
+  try { [0, 350, 800, 1500].forEach(function(t){ setTimeout(function(){ window.rvStaffRender && window.rvStaffRender(); }, t); }); } catch(e) {}
   var el=document.getElementById('rv-panel-pianos');
   if(!el) return;
 
@@ -55505,7 +55624,7 @@ function pmHnOnNote(midi) {
    dans les têtes. Grande portée automatique dès que MG et MD sont présentes. ── */
 function pmStfSpell(m, key){
   const pc = ((m % 12) + 12) % 12;
-  const BEM = [5, 10, 3, 8, 1].indexOf(((key % 12) + 12) % 12) >= 0;
+  const BEM = [0, 5, 10, 3, 8, 1].indexOf(((key % 12) + 12) % 12) >= 0; // Do inclus : ♭II, ♭VII, IVm
   const nm = (BEM ? ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'] : ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'])[pc];
   const acc = nm.length > 1 ? (nm[1] === '#' ? '♯' : '♭') : '';
   return { step: (Math.floor(m / 12) - 1) * 7 + 'CDEFGAB'.indexOf(nm[0]), acc: acc, nm: nm[0] + acc };
@@ -55563,7 +55682,7 @@ function pmStfDraw(cols,o){
       const t=topY(si),bot=t+hS,b0=B0[cl];
       let N=c.notes.filter(function(n){return !grand||handOf(n)===(cl==='F'?'MG':'MD');});
       if(!N.length)return;
-      N=N.map(function(n){const sp_=pmStfSpell(n.m,key,cRp,cIvs);let acc=sp_.acc;
+      N=N.map(function(n){const sp_=n.sp||pmStfSpell(n.m,key,cRp,cIvs);let acc=sp_.acc;
         if(o.ks){const ka=ksMap[sp_.nm.charAt(0)]||'';acc=(acc===ka)?'':(acc||'♮');}
         return {n:n,step:sp_.step-b0,acc:acc,nm:sp_.nm};}).sort(function(a,b){return a.step-b.step;});
       /* lignes supplémentaires */
