@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v77 — MIDI Edition</title>
+    <title>Piano Master v78 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -54554,9 +54554,12 @@ window.rvSyncExpanded = function() {
     var p = seq[idx];
     var st = typeof window._rv_state === 'function' ? window._rv_state() : {};
     var cat = st.cat || 'CAT06';
+    // v78 — main gauche : jouée au registre écrit (clé de fa), une octave sous le mini-clavier
+    var _mgSnd = (typeof _rvHandOf === 'function' && _rvHandOf(st.fam || '') === 'MG');
+    var _snd = function(a){ return _mgSnd ? a.map(function(n){ return {note:n.note, octave:n.octave-1}; }) : a; };
     // v76 — pas issu des claviers (repli) : on joue l'accord du clavier n° idx
     if (p._kb) {
-      if (typeof playChord === 'function') { if (typeof initAudio === 'function') initAudio(); playChord(p._kb, 'simultaneous'); }
+      if (typeof playChord === 'function') { if (typeof initAudio === 'function') initAudio(); playChord(_snd(p._kb), 'simultaneous'); }
       return;
     }
     var tonRoot = (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C';
@@ -54574,7 +54577,7 @@ window.rvSyncExpanded = function() {
       }
       if (typeof playChord === 'function') {
         if (typeof initAudio === 'function') initAudio();
-        playChord([n], 'simultaneous');
+        playChord(_snd([n]), 'simultaneous');
       }
       return;
     }
@@ -54603,13 +54606,13 @@ window.rvSyncExpanded = function() {
       if (cat === 'CAT01') {
         // Gammes : notes une par une (la gamme est dans scaleNotes, pas dans notes du step)
         // On joue juste la tonique pour indiquer le degré
-        playChord(notes.slice(0,1), 'simultaneous');
+        playChord(_snd(notes.slice(0,1)), 'simultaneous');
       } else if (cat === 'CAT02') {
         // Arpèges : notes en arpège
-        playChord(notes, 'arpeggio');
+        playChord(_snd(notes), 'arpeggio');
       } else {
         // Accords, fragments, progressions : simultané
-        playChord(notes, 'simultaneous');
+        playChord(_snd(notes), 'simultaneous');
       }
     }
   }
@@ -54715,7 +54718,8 @@ window.rvSyncExpanded = function() {
     // v76 — familles sans séquence PROG (descentes de voicings, etc.) : la démo
     // joue les accords des claviers du panneau, ceux que la portée montre déjà
     if (!_demoSeq.length) {
-      _demoSeq = _rvColsFromKeyboards().map(function(c){
+      var _dc = _rvDescCols(st);
+      _demoSeq = (_dc.length ? _dc : _rvColsFromKeyboards()).map(function(c){ /* registre écrit */
         return { _kb: c.notes.map(function(n){ return { note: PM_NNS[n.m % 12], octave: Math.floor(n.m / 12) - 1 }; }) };
       });
     }
@@ -54785,6 +54789,42 @@ window.rvSyncExpanded = function() {
     return out;
   }
 
+  // v78 — main d'une famille : MG-… / …-MG = main gauche ; …-MGMD = les deux (coupure au Do central) ; sinon MD
+  function _rvHandOf(fam) { return /-MGMD$/.test(fam) ? 'MGMD' : ((/^MG-/.test(fam) || /-MG$/.test(fam)) ? 'MG' : 'MD'); }
+  function _rvApplyHands(cols, fam) {
+    const H = _rvHandOf(fam);
+    cols.forEach(function (c) { c.notes.forEach(function (n) {
+      if (n.hand) return;                                      // main déjà connue (descentes)
+      if (H === 'MG') { n.m -= 12; n.hand = 'MG'; if (n.sp) n.sp = { step: n.sp.step - 7, acc: n.sp.acc, nm: n.sp.nm }; } // mini-clavier en octave 4 ; la MG joue une octave plus bas
+      else if (H === 'MGMD') n.hand = n.m < 60 ? 'MG' : 'MD';
+      else n.hand = 'MD';
+    }); });
+    return cols;
+  }
+  window._rvHandOf = _rvHandOf;
+  // descentes VOI-DESC : mains et registre réels, calculés par rvFillPanel
+  function _rvDescCols(st) {
+    if (!/^VOI-DESC-/.test(st.fam || '')) return [];
+    // données absentes ou d'un autre skill : rvFillPanel les calcule de façon synchrone
+    if ((!window._rvDescData || window._rvDescData.sel !== st.sel) && st.sel && typeof window.rvFillPanel === 'function' && window._rvDescAsk !== st.sel) {
+      window._rvDescAsk = st.sel; try { window.rvFillPanel(st.sel); } catch (e) {}
+    }
+    const D = window._rvDescData;
+    if (!D || D.sel !== st.sel) return [];
+    const mk = function (n, h) { const pc = _RV_PC[n.note]; return pc == null ? null : { m: (n.octave + 1) * 12 + pc, col: _RV_FN_COL[n.fn || n['function']] || '#E8ECF5', hand: h }; };
+    const out = D.list.map(function (c, i) {
+      const lhH = D.hand === 'MD' ? 'MD' : 'MG';   // en « MD » seule, toutes les notes sont à droite
+      const notes = c.lh.map(function (n) { return mk(n, lhH); }).concat(c.rh.map(function (n) { return mk(n, D.hand === 'MG' ? 'MG' : 'MD'); })).filter(Boolean);
+      return { notes: notes, lb: c.lb, wf: 1, _i: i };
+    }).filter(function (c) { return c.notes.length; });
+    // la MG de l'app vit en octave 4-5 (mini-clavier) : on la ramène sous le Do central,
+    // d'un même nombre d'octaves pour toute la séquence (clé de fa lisible, mêmes intervalles)
+    let mx = -1; out.forEach(function (c) { c.notes.forEach(function (n) { if (n.hand === 'MG' && n.m > mx) mx = n.m; }); });
+    const sh = mx > 60 ? 12 * Math.ceil((mx - 60) / 12) : 0;
+    if (sh) out.forEach(function (c) { c.notes.forEach(function (n) { if (n.hand === 'MG') n.m -= sh; }); });
+    return out;
+  }
+
   window.rvStaffRender = function() {
     var el = document.getElementById('rv-staff');
     if (!el) return;
@@ -54826,7 +54866,9 @@ window.rvSyncExpanded = function() {
             n.sp = { step: oct * 7 + li, acc: ['♭♭','♭','','♯','♯♯'][acc + 2], nm: 'CDEFGAB'[li] + ['♭♭','♭','','♯','♯♯'][acc + 2] }; });
         }
       }
+      if (!cols.length) cols = _rvDescCols(st);
       if (!cols.length) cols = _rvColsFromKeyboards();
+      _rvApplyHands(cols, st.fam);
       // claviers pas encore construits (vue normale : rvFillPanel n'a pas tourné) —
       // on les construit dans le conteneur caché, comme le fait ⤢ CLAVIERS ; une
       // seule fois par skill (rvFillPanel rappelle rvStaffRender ensuite)
@@ -54927,6 +54969,8 @@ window.rvFillPanel=function(skillId){
       prevNotes=all;
       return {deg:deg,dr:dr,ct:ct,lh:v&&v.leftHand||[],rh:v&&v.rightHand||[],all:all};
     });
+    /* v78 — la portée et la démo lisent ces voicings avec leurs MAINS et leur registre réel */
+    window._rvDescData = { sel: skillId, hand: hand, list: computed.map(function(c){ return { lb: c.deg.lbl + ' ' + c.dr + (CT_LBL[c.ct]||c.ct), lh: c.lh, rh: c.rh }; }) };
     var html='<div style="padding:0 0 8px 0">';
     computed.forEach(function(c,i){
       var cid='rvDesc_'+i;
@@ -55727,7 +55771,8 @@ function pmStfDraw(cols,o){
   let grand=!!o.grand;
   if(!grand){if(anyHand)grand=all.some(function(n){return handOf(n)==='MG';})&&all.some(function(n){return handOf(n)==='MD';});
     else grand=!(mn>=55||mx<=64);}
-  const staves=grand?['G','F']:[(mn>=55||(mx>64))?'G':'F'];
+  // v78 — main gauche = clé de fa, main droite = clé de sol (une seule main déclarée : sa clé)
+  const staves=grand?['G','F']:(anyHand?[all.every(function(n){return handOf(n)==='MG';})?'F':'G']:[(mn>=55||(mx>64))?'G':'F']);
   const B0={G:30,F:18};
   /* 🎼 v9.75 — armure : o.ks = true quand la portée est dans une tonalité (gammes, Hanon, grilles, lignes) ; la clé = o.key.
      Dièses dans l'ordre F C G D A E B, bémols B E A D G C F ; les notes diatoniques perdent leur altération, ♮ sinon. */
@@ -55826,8 +55871,11 @@ function pmHnSvg() {
   for (let i = i0; i < i1; i++) {
     const cur = i === PMHN.ptr, bad = cur && PMHN.badAt === i;
     const col = cur ? '#F5C842' : (i < PMHN.ptr ? '#3ECF8E' : '#E8ECF5');
-    const notes = [{ m: N[i], col: col, bad: bad, lb: F[i] != null ? F[i] : null }];
-    if (PMHN.main === 'me') notes.push({ m: N[i] - 12, col: col, bad: bad });
+    // affiché une octave au-dessus du générateur Garden (MD dès Do 4 en clé de sol, MG dès Do 3
+    // en clé de fa) : la vérification ne juge que le nom des notes, l'octave jouée est libre
+    const hd = PMHN.main === 'mg' ? 'MG' : 'MD';
+    const notes = [{ m: N[i] + 12, col: col, bad: bad, lb: F[i] != null ? F[i] : null, hand: hd }];
+    if (PMHN.main === 'me') notes.push({ m: N[i], col: col, bad: bad, hand: 'MG' });
     // wf : colonne resserrée (Garden prévoit la largeur d'un accord ; ici une note seule)
     cols.push({ notes: notes, wf: 0.45, lb: i % L === 0 ? 'm. ' + (Math.floor(i / L) + 1) : null,
                 bar: (i + 1) % L === 0 || i === N.length - 1 ? 1 : 0 });
@@ -55945,6 +55993,7 @@ function pmStfCompanion(id, notes, handsData) {
     if (!n || PM_STF_PC[n.note] == null || typeof n.octave !== 'number') return;
     const m = (n.octave + 1) * 12 + PM_STF_PC[n.note]; if (seen[m]) return; seen[m] = 1;
     const o = { m: m, col: PM_STF_FN[n.function || n.fn] || '#E8ECF5' };
+    if (L.length && R.length) o.hand = L.some(function (h) { return h && h.note === n.note && h.octave === n.octave; }) ? 'MG' : 'MD';
     ns.push(o);
   });
   const slot = _pmStfSlot(id, el);
@@ -55992,7 +56041,7 @@ function pmStfCompanion(id, notes, handsData) {
   if (el._pmStfCur && el._pmStfCur.sig !== sig) el._pmStfPrev = el._pmStfCur;
   el._pmStfCur = { sig: sig, ns: ns };
   const pv = el._pmStfPrev;
-  const cols = pv ? [{ notes: pv.ns.map(function (x) { return { m: x.m, col: x.col }; }), dur: 'w', op: 0.4 }, { notes: ns, dur: 'w' }] : [{ notes: ns, dur: 'w' }];
+  const cols = pv ? [{ notes: pv.ns.map(function (x) { return { m: x.m, col: x.col, hand: x.hand }; }), dur: 'w', op: 0.4 }, { notes: ns, dur: 'w' }] : [{ notes: ns, dur: 'w' }];
   slot.innerHTML = '<div style="width:' + (pv ? 220 : 140) + 'px">' + pmStfDraw(cols, { sp: 8, key: key, vl: !!pv }) + '</div>';
   // ni écraser un clavier (mises en page flexibles : elles rétrécissent au lieu de défiler)
   const ecrase = kbs.some(function (k, i) { return k.getBoundingClientRect().height < h0[i] - 2; });
