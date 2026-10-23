@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v73 — MIDI Edition</title>
+    <title>Piano Master v74 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -3333,6 +3333,14 @@ document.head.appendChild(_lockStyle);
                 <div class="toggle-row">
                     <span class="toggle-label">🎼 Portée sous les claviers</span>
                     <button class="toggle on" id="togglePmStf" onclick="this.classList.toggle('on');pmStfToggle(this.classList.contains('on'))"></button>
+                </div>
+                <div class="toggle-row">
+                    <span class="toggle-label">🎹 Degrés et doigtés sur les touches</span>
+                    <button class="toggle on" id="togglePmGd" onclick="this.classList.toggle('on');pmGdToggle(this.classList.contains('on'))"></button>
+                </div>
+                <div class="toggle-row">
+                    <span class="toggle-label">🎯 Retour MIDI sur le clavier</span>
+                    <button class="toggle on" id="togglePmFb" onclick="this.classList.toggle('on');pmFbToggle(this.classList.contains('on'))"></button>
                 </div>
                 <div class="sidebar-label" style="margin-top:12px">Audio</div>
                 <div class="toggle-row">
@@ -54751,7 +54759,8 @@ window.rvSyncExpanded = function() {
         }).filter(Boolean);
         if (!notes.length) return;
         var lb = (!p._noteOnly && p.lbl) ? String(p.lbl).split('\n')[0] : null;
-        cols.push({ notes: notes, lb: lb, wf: p._noteOnly ? 0.55 : 1, _i: i });
+        // pendant la démo : l'accord à venir dans le cadre « suivant ▸ » de Garden
+        cols.push({ notes: notes, lb: lb, wf: p._noteOnly ? 0.55 : 1, _i: i, box: (step >= 0 && i === step + 1 && !p._noteOnly) ? true : undefined });
       });
       // Repli : familles sans entrée PROG (cadences, main gauche, voicings…) —
       // dessinées par un bloc dédié de rvFillPanel. On lit ses claviers : une
@@ -54798,7 +54807,7 @@ window.rvSyncExpanded = function() {
       el.innerHTML = '<div style="background:#0c0f1a;border:1px solid var(--border);border-radius:8px;padding:4px 8px 2px">'
         + '<div style="font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--text-dim);font-family:var(--font-mono)">🎼 LE TRAVAIL À FAIRE'
         + (seq.length > cols.length ? ' · ' + seq.length + ' pas' : '') + '</div>'
-        + pmStfDraw(cols, { sp: 8, key: key, scale: 1.25 }) + '</div>';
+        + pmStfDraw(cols, { sp: 8, key: key, scale: 1.25, vl: cols.length > 1 && cols.some(function(c){ return c.notes.length > 1; }) }) + '</div>';
     } catch(e) { el.innerHTML = ''; }
   };
 
@@ -55634,6 +55643,32 @@ function pmStfSpell(m, key){
   const acc = nm.length > 1 ? (nm[1] === '#' ? '♯' : '♭') : '';
   return { step: (Math.floor(m / 12) - 1) * 7 + 'CDEFGAB'.indexOf(nm[0]), acc: acc, nm: nm[0] + acc };
 }
+/* flèches de conduite des voix — Garden v9.79/v9.89 (VL_COL, vlPairs, stfVL) */
+const PM_VL_COL={0:'#F5C842',1:'#3ECF8E',2:'#4F9EFF',x:'#FF9F43'};
+function pmVlPairs(A,B){const out=[];['MG','MD'].forEach(function(h){
+  const a=A.filter(function(n){return n.hand===h;}),b=B.filter(function(n){return n.hand===h;});
+  /* v9.89 — même nombre de notes dans la main : les voix ne se croisent pas (du grave à l'aigu, doigt par doigt) */
+  if(a.length&&a.length===b.length){const sa=a.slice().sort(function(x,y){return x.m-y.m;}),sb=b.slice().sort(function(x,y){return x.m-y.m;});sa.forEach(function(x,i){out.push([x,sb[i]]);});return;}
+  const cand=[];a.forEach(function(x,i){b.forEach(function(y,j){cand.push([Math.abs(y.m-x.m),i,j]);});});
+  cand.sort(function(p,q){return p[0]-q[0]||p[1]-q[1];});const ua={},ub={};
+  cand.forEach(function(c){if(ua[c[1]]||ub[c[2]])return;ua[c[1]]=ub[c[2]]=1;out.push([a[c[1]],b[c[2]]]);});});
+  return out;}
+function pmStfVL(HD,cols,sp,o){let s='';
+  for(let ci=1;ci<cols.length;ci++){
+    const A=HD.filter(function(h){return h.ci===ci-1&&!h.ghost;}),B=HD.filter(function(h){return h.ci===ci&&!h.ghost;});
+    const op=Math.min(cols[ci-1].op!=null?cols[ci-1].op:1,cols[ci].op!=null?cols[ci].op:1,cols[ci].box?.7:1);
+    s+='<g opacity="'+Math.max(.45,op)+'">';
+    pmVlPairs(A,B).forEach(function(p){const a=p[0],b=p[1],d=b.m-a.m,ad=Math.abs(d);
+      const x1=a.cx+sp*1.3,x2=b.x-sp*(b.acc?2.9:1.05);
+      if(d===0){s+='<line x1="'+(a.x+sp*.8)+'" y1="'+a.y+'" x2="'+(b.x-sp*.8)+'" y2="'+b.y+'" stroke="#F5C842" stroke-width="'+(sp*.16)+'" stroke-dasharray="'+(sp*.35)+' '+(sp*.3)+'" opacity=".85"/>'
+        +'<ellipse cx="'+b.x+'" cy="'+b.y+'" rx="'+(sp*1.15)+'" ry="'+(sp*.9)+'" fill="#F5C842" fill-opacity=".18" stroke="#F5C842" stroke-width="'+(sp*.12)+'" stroke-opacity=".7"/>';return;}
+      const col=PM_VL_COL[ad]||PM_VL_COL.x,mx=(x1+x2)/2,my=(a.y+b.y)/2-sp*.6;
+      const ang=Math.atan2(b.y-my,x2-mx),ah=sp*.6;
+      s+='<path d="M'+x1+','+a.y+' Q'+mx+','+my+' '+x2+','+b.y+'" fill="none" stroke="'+col+'" stroke-width="'+(sp*.17)+'" stroke-linecap="round"/>'
+        +'<path d="M'+x2+','+b.y+' L'+(x2-ah*Math.cos(ang-.45))+','+(b.y-ah*Math.sin(ang-.45))+' L'+(x2-ah*Math.cos(ang+.45))+','+(b.y-ah*Math.sin(ang+.45))+'Z" fill="'+col+'"/>'
+        +'<text x="'+mx+'" y="'+(my-sp*.25)+'" text-anchor="middle" font-family="Arial" font-weight="900" font-size="'+(sp*.8)+'" fill="'+col+'">'+(ad<=2?(d>0?'↑':'↓')+(ad===1?'½':'1'):'')+'</text>';});
+    s+='</g>';}
+  return s;}
 function pmStfDraw(cols,o){
   o=o||{};const mode=o.mode||'color';if(mode==='off')return '';
   const sp=o.sp||10,key=o.key==null?0:o.key;
@@ -55728,6 +55763,7 @@ function pmStfDraw(cols,o){
     if(c.volta)out+='<path d="M'+(cx-sp*2.6)+','+(sp*3.4)+' V'+(sp*2.6)+' H'+(cx-sp*2.6+CW[ci]-sp*.6)+'" fill="none" stroke="#F5C842" stroke-width="'+(sp*.12)+'"/><text x="'+(cx-sp*2.3)+'" y="'+(sp*3.5)+'" font-family="Inter,Arial" font-weight="800" font-size="'+(sp*.9)+'" fill="#F5C842">'+c.volta+'.</text>';
     out+='</g>';
   });
+  if(o.vl&&cols.length>1)out+=pmStfVL(HD,cols,sp,o);
   if(o.lb)out+='<text x="'+x0+'" y="'+(sp*1.1)+'" font-family="Inter,Arial" font-weight="700" font-size="'+(sp*1.05)+'" fill="#7A85A8">'+o.lb+'</text>';
   return '<div class="pm-stf" style="display:block;margin:2px auto 0;max-width:'+(o.scale?Math.round(W*o.scale)+'px':'100%')+'"><svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto">'+out+'</svg></div>';
 }
@@ -55901,7 +55937,14 @@ function pmStfCompanion(id, notes, handsData) {
   const kbs = body ? Array.prototype.map.call(body.querySelectorAll('.piano-keys'), function (k) { return k.parentElement || k; }) : [];
   slot.innerHTML = '';
   const avant = debord(), h0 = kbs.map(function (k) { return k.getBoundingClientRect().height; });
-  slot.innerHTML = '<div style="width:96px">' + pmStfDraw([{ notes: ns, dur: 'w' }], { sp: 6, key: key }) + '</div>';
+  // accord précédent du même clavier (estompé) → accord actuel, avec les flèches
+  // de conduite des voix : les modules qui enchaînent des accords en profitent
+  const sig = ns.map(function (x) { return x.m; }).join(',');
+  if (el._pmStfCur && el._pmStfCur.sig !== sig) el._pmStfPrev = el._pmStfCur;
+  el._pmStfCur = { sig: sig, ns: ns };
+  const pv = el._pmStfPrev;
+  const cols = pv ? [{ notes: pv.ns.map(function (x) { return { m: x.m, col: x.col }; }), dur: 'w', op: 0.4 }, { notes: ns, dur: 'w' }] : [{ notes: ns, dur: 'w' }];
+  slot.innerHTML = '<div style="width:' + (pv ? 150 : 96) + 'px">' + pmStfDraw(cols, { sp: 6, key: key, vl: !!pv }) + '</div>';
   // ni écraser un clavier (mises en page flexibles : elles rétrécissent au lieu de défiler)
   const ecrase = kbs.some(function (k, i) { return k.getBoundingClientRect().height < h0[i] - 2; });
   // ni augmenter le débordement d'aucun conteneur (un écran qui tient doit continuer à tenir)
@@ -55921,6 +55964,244 @@ function pmStfCompanion(id, notes, handsData) {
 })();
 window.pmStfToggle = pmStfToggle; window.pmStfOn = pmStfOn;
 try { const _tg = document.getElementById('togglePmStf'); if (_tg && !pmStfOn()) _tg.classList.remove('on'); } catch (e) {}
+
+/* ════════════════════════════════════════════════════════════════════════
+   🎹 v74 — AIDES SUR LES TOUCHES (guide de Garden v9.0)
+   pastille = degré (1, ♭3, 5, ♭7, 9…), couleur = fonction, carré = MG ;
+   petit chiffre au-dessus = doigt. Doigtés et noms de degrés : fonctions
+   `fingering` et `degName` de Garden reprises telles quelles.
+   Fondamentale = la note marquée tonic/root, sinon la plus grave.
+   Mains = handsData de l'app ; à défaut, coupure au Do central.
+   Interrupteur Options › Lecture (pm_kbaid_on). Skills et Hanon exclus.
+   ════════════════════════════════════════════════════════════════════════ */
+function pmGdFingering(notes,hand){
+  const n=notes.length;if(!n)return '';
+  const g=[];for(let i=1;i<n;i++)g.push(notes[i]-notes[i-1]);
+  const two=function(x){return x>=7?5:(x>=5?4:(x>=3?3:2));};
+  let f;
+  if(n===1)f=[hand==='MG'?5:1];
+  else if(n===2)f=hand==='MG'?[5,g[0]>=7?1:(g[0]>=5?2:(g[0]>=3?3:4))]:[1,two(g[0])];
+  else if(n===3){const span=g[0]+g[1];
+    if(hand==='MG')f=span<=4?[5,4,3]:(span<=7?[5,(g[0]<=2?4:3),(g[1]<=2?2:1)]:[5,(g[1]<=2?2:(g[0]<=2?4:3)),1]);
+    else f=span<=4?[1,2,3]:[1,(g[0]<=2?2:(g[1]<=2?4:3)),5];}
+  else if(n===4)f=hand==='MG'?(g[0]<=2?[5,4,2,1]:(g[2]<=2?[5,3,2,1]:[5,3,2,1])):(g[2]<=2?[1,2,4,5]:(g[0]>=4&&g[1]<=2?[1,3,4,5]:[1,2,3,5]));
+  else f=hand==='MG'?[5,4,3,2,1].slice(0,n):[1,2,3,4,5].slice(0,n);
+  const wide=notes[n-1]-notes[0]>12;
+  return f.join('-')+(wide?' ↔'+(notes[n-1]-notes[0]>=16?' 10e':'')+'':'');
+}
+function pmGdDegName(iv,ivs){
+  const has=function(x){return ivs.indexOf(x)>=0;};
+  switch(iv){
+    case 0:return '1';case 1:return '♭9';case 2:return '9';
+    case 3:return has(4)?'♯9':'♭3';case 4:return '3';
+    case 5:return (has(3)||has(4))?'11':'4';
+    case 6:return has(7)?'♯11':(has(4)?'♭5':'♭5');
+    case 7:return '5';case 8:return (has(7)||has(10)||has(11))?'♭13':'♯5';
+    case 9:return (has(10)||has(11))?'13':'6';case 10:return '♭7';case 11:return '7';
+  }
+  return '';
+}
+// Fondamentale de l'accord affiché. Les couleurs des modules ne suffisent pas :
+// certains (Vamp Chords…) colorent selon la tonalité maîtresse, pas selon
+// l'accord. On évalue chaque fondamentale possible (les 12 : voicings sans
+// fondamentale compris) sur les modèles CHORD_PATTERNS de l'app ; la basse
+// jouée reçoit un bonus, puis une fondamentale présente dans l'accord.
+function pmGdRoot(NN) {
+  const pcs = []; NN.forEach(function (x) { if (pcs.indexOf(x.m % 12) < 0) pcs.push(x.m % 12); });
+  const bass = NN[0].m % 12;
+  if (pcs.length < 3 || typeof CHORD_PATTERNS === 'undefined') return bass;
+  let best = bass, bs = -1;
+  for (let r = 0; r < 12; r++) {
+    const ivs = pcs.map(function (pc) { return (pc - r + 12) % 12; });
+    Object.keys(CHORD_PATTERNS).forEach(function (k) {
+      const P = CHORD_PATTERNS[k], pat = P.intervals.map(function (i) { return i % 12; });
+      if (P.ninth !== undefined) pat.push(P.ninth);
+      const hit = ivs.filter(function (iv) { return pat.indexOf(iv) >= 0; }).length;
+      if (hit < ivs.length) return;                       // toutes les notes doivent s'expliquer
+      let sc = hit / Math.max(pat.length, ivs.length);
+      if (r === bass) sc += 0.3; else if (pcs.indexOf(r) >= 0) sc += 0.1;
+      if (sc > bs) { bs = sc; best = r; }
+    });
+  }
+  return best;
+}
+const PM_GD_COL = { tonic:'#3b82f6', root:'#d97706', mediant:'#ca8a04', dominant:'#ea580c',
+                    seventh:'#9333ea', extension:'#059669', ninth:'#059669', fourth:'#059669' };
+function pmGdOn() { try { return localStorage.getItem('pm_kbaid_on') !== '0'; } catch (e) { return true; } }
+function pmGdToggle(on) {
+  try { localStorage.setItem('pm_kbaid_on', on ? '1' : '0'); } catch (e) {}
+  if (!on) document.querySelectorAll('.pm-gd,.pm-gf').forEach(function (x) { x.remove(); });
+}
+function pmGdClear(id) {
+  const el = document.getElementById(id); if (!el) return;
+  el.querySelectorAll('.pm-gd,.pm-gf').forEach(function (x) { x.remove(); });
+}
+function pmGdApply(id, notes, handsData) {
+  if (!pmGdOn()) return;
+  const el = document.getElementById(id);
+  if (!el || _pmStfExclu(id, el)) return;
+  pmGdClear(id);
+  const NN = [];
+  (notes || []).forEach(function (n) {
+    if (!n || PM_STF_PC[n.note] == null || typeof n.octave !== 'number') return;
+    // même rabattement d'octave que displayNotesOnKeyboard (> octave 5)
+    const oc = n.octave > 5 ? n.octave - 1 : n.octave;
+    const m = (oc + 1) * 12 + PM_STF_PC[n.note];
+    if (!NN.some(function (x) { return x.m === m; })) NN.push({ m: m, note: n.note, oct: oc, fn: n.function || n.fn || '' });
+  });
+  if (!NN.length) return;
+  NN.sort(function (a, b) { return a.m - b.m; });
+  const rpc = pmGdRoot(NN);
+  const ivs = NN.map(function (x) { return ((x.m - rpc) % 12 + 12) % 12; });
+  const L = (handsData && handsData.leftHand) || [];
+  const isMG = function (x) {
+    if (L.length) return L.some(function (h) { return h && h.note === x.note && (h.octave === x.oct || h.octave === x.oct + 1); });
+    return x.m < 60 && NN.some(function (y) { return y.m >= 60; });
+  };
+  const mg = NN.filter(isMG), md = NN.filter(function (x) { return !isMG(x); });
+  const fg = {};
+  [[mg, 'MG'], [md, 'MD']].forEach(function (h) {
+    if (!h[0].length || h[0].length > 5) return;
+    const f = String(pmGdFingering(h[0].map(function (x) { return x.m; }), h[1])).split(' ')[0].split('-');
+    h[0].forEach(function (x, i) { if (f[i]) fg[x.m] = f[i]; });
+  });
+  NN.forEach(function (x) {
+    const key = el.querySelector('[data-note="' + x.note + '"][data-octave="' + x.oct + '"]');
+    if (!key) return;
+    const iv = ((x.m - rpc) % 12 + 12) % 12, blk = key.classList.contains('black-key');
+    const gd = document.createElement('span');
+    gd.className = 'pm-gd';
+    gd.textContent = pmGdDegName(iv, ivs);
+    gd.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);bottom:' + (blk ? 4 : 18) + 'px;min-width:16px;height:16px;padding:0 3px;'
+      + 'border-radius:' + (isMG(x) ? '3px' : '8px') + ';font:800 9.5px/16px Inter,Arial,sans-serif;text-align:center;color:#fff;pointer-events:none;z-index:6;'
+      + 'background:' + (PM_GD_COL[x.fn] || '#475569') + ';box-shadow:0 0 0 1.5px rgba(0,0,0,.45)';
+    key.appendChild(gd);
+    if (fg[x.m]) {
+      const gf = document.createElement('span');
+      gf.className = 'pm-gf'; gf.textContent = fg[x.m];
+      gf.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);bottom:' + (blk ? 22 : 36) + 'px;font:800 9px/1 Inter,Arial,sans-serif;'
+        + 'color:' + (blk ? '#e2e8f0' : '#1e293b') + ';pointer-events:none;z-index:6';
+      key.appendChild(gf);
+    }
+  });
+}
+(function () {
+  if (typeof clearKeyboard === 'function' && !clearKeyboard._pmGd) {
+    const _c = clearKeyboard;
+    const w = function (id) { const r = _c.apply(this, arguments); try { pmGdClear(id); } catch (e) {} return r; };
+    w._pmGd = true; window.clearKeyboard = w;
+  }
+  const _d = window.displayNotesOnKeyboard;
+  if (_d && !_d._pmGd) {
+    const w2 = function (containerId, notes, showLabels, handsData) {
+      const r = _d.apply(this, arguments);
+      try { pmGdApply(containerId, notes, handsData); } catch (e) {}
+      return r;
+    };
+    w2._pmGd = true; w2._pmStf = true; window.displayNotesOnKeyboard = w2;
+  }
+})();
+window.pmGdToggle = pmGdToggle; window.pmGdOn = pmGdOn;
+try { const _tg2 = document.getElementById('togglePmGd'); if (_tg2 && !pmGdOn()) _tg2.classList.remove('on'); } catch (e) {}
+
+/* ════════════════════════════════════════════════════════════════════════
+   🎯 v74 — RETOUR MIDI SUR LE CLAVIER (drill de Garden v9.25)
+   Cible = les notes que le dernier clavier visible affiche. Jeu = notes
+   tenues (MIDI.activeNotes ∪ MIDI_STATE.heldNotes : les deux voies MIDI).
+   vert = juste · orange = bonne note, mauvaise octave · rouge ✕ = fausse
+   note · pointillé or = note de la cible pas encore jouée (seulement quand
+   on joue). Purement visuel : aucune logique d'exercice n'est touchée.
+   Interrupteur Options › Lecture (pm_midifb_on).
+   ════════════════════════════════════════════════════════════════════════ */
+(function () {
+  const st = document.createElement('style');
+  // outline (et non box-shadow) : reste visible par-dessus le surlignage MIDI de l'app
+  st.textContent = '.pm-fb-ok{outline:4px solid #3ECF8E!important;outline-offset:-4px;z-index:4}'
+    + '.pm-fb-oct{outline:4px solid #F59E0B!important;outline-offset:-4px;z-index:4}'
+    + '.pm-fb-bad{outline:4px solid #EF4444!important;outline-offset:-4px;z-index:4;filter:saturate(.4) brightness(.8)}'
+    + '.pm-fb-miss{outline:2px dashed #F5C842!important;outline-offset:-4px}'
+    + '.pm-fb-x{position:absolute;left:50%;transform:translateX(-50%);top:6px;font:900 16px/1 Arial;color:#EF4444;text-shadow:0 0 3px #fff;pointer-events:none;z-index:7}';
+  document.head.appendChild(st);
+})();
+const PM_FB = { id: null, tgt: [] };
+const PM_NNS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function pmFbOn() { try { return localStorage.getItem('pm_midifb_on') !== '0'; } catch (e) { return true; } }
+function pmFbToggle(on) { try { localStorage.setItem('pm_midifb_on', on ? '1' : '0'); } catch (e) {} if (!on) pmFbClear(); }
+function pmFbClear() {
+  document.querySelectorAll('.pm-fb-ok,.pm-fb-oct,.pm-fb-bad,.pm-fb-miss').forEach(function (k) { k.classList.remove('pm-fb-ok', 'pm-fb-oct', 'pm-fb-bad', 'pm-fb-miss'); });
+  document.querySelectorAll('.pm-fb-x').forEach(function (x) { x.remove(); });
+}
+function pmFbSetTarget(id, notes) {
+  const el = document.getElementById(id);
+  if (!el || el.offsetParent === null || _pmStfExclu(id, el)) return;
+  const t = [];
+  (notes || []).forEach(function (n) {
+    if (!n || PM_STF_PC[n.note] == null || typeof n.octave !== 'number') return;
+    const oc = n.octave > 5 ? n.octave - 1 : n.octave;
+    t.push((oc + 1) * 12 + PM_STF_PC[n.note]);
+  });
+  if (!t.length) return;
+  PM_FB.id = id; PM_FB.tgt = t;
+  pmFbRender();
+}
+function _pmFbHeld() {
+  const h = {};
+  try { if (window.MIDI && MIDI.activeNotes) MIDI.activeNotes.forEach(function (v, k) { h[k] = 1; }); } catch (e) {}
+  try { if (typeof MIDI_STATE !== 'undefined' && MIDI_STATE.heldNotes) MIDI_STATE.heldNotes.forEach(function (k) { h[k] = 1; }); } catch (e) {}
+  return Object.keys(h).map(Number);
+}
+function pmFbRender() {
+  pmFbClear();
+  if (!pmFbOn() || !PM_FB.id) return;
+  const el = document.getElementById(PM_FB.id);
+  if (!el || el.offsetParent === null) return;
+  const held = _pmFbHeld();
+  if (!held.length) return;
+  const keyOf = function (m) {
+    let oc = Math.floor(m / 12) - 1; if (oc > 5) oc -= 1;
+    return el.querySelector('[data-note="' + PM_NNS[m % 12] + '"][data-octave="' + oc + '"]');
+  };
+  const tpc = PM_FB.tgt.map(function (m) { return m % 12; });
+  held.forEach(function (m) {
+    const k = keyOf(m); if (!k) return;
+    if (PM_FB.tgt.indexOf(m) >= 0) k.classList.add('pm-fb-ok');
+    else if (tpc.indexOf(m % 12) >= 0) k.classList.add('pm-fb-oct');
+    else {
+      k.classList.add('pm-fb-bad');
+      const x = document.createElement('span'); x.className = 'pm-fb-x'; x.textContent = '✕'; k.appendChild(x);
+    }
+  });
+  const hpc = held.map(function (m) { return m % 12; });
+  PM_FB.tgt.forEach(function (m) {
+    if (held.indexOf(m) >= 0) return;
+    const k = keyOf(m); if (k && hpc.indexOf(m % 12) < 0) k.classList.add('pm-fb-miss');
+  });
+}
+let _pmFbT = null;
+function _pmFbLater() { clearTimeout(_pmFbT); _pmFbT = setTimeout(function () { try { pmFbRender(); } catch (e) {} }, 25); }
+document.addEventListener('midiNoteOn', _pmFbLater);
+document.addEventListener('midiNoteOff', _pmFbLater);
+(function () {
+  // système 2 (Web MIDI) : le relâchement n'émet pas d'événement DOM
+  if (typeof midiNoteOff === 'function' && !midiNoteOff._pmFb) {
+    const _o = midiNoteOff;
+    const w = function () { const r = _o.apply(this, arguments); _pmFbLater(); return r; };
+    w._pmFb = true; window.midiNoteOff = w;
+  }
+  const _d = window.displayNotesOnKeyboard;
+  if (_d && !_d._pmFb) {
+    const w2 = function (containerId, notes) {
+      const r = _d.apply(this, arguments);
+      try { pmFbSetTarget(containerId, notes); } catch (e) {}
+      return r;
+    };
+    w2._pmFb = true; w2._pmGd = true; w2._pmStf = true; window.displayNotesOnKeyboard = w2;
+  }
+})();
+window.pmFbToggle = pmFbToggle; window.pmFbOn = pmFbOn;
+try { const _tg3 = document.getElementById('togglePmFb'); if (_tg3 && !pmFbOn()) _tg3.classList.remove('on'); } catch (e) {}
+
+
 
 </script>
 </body>
