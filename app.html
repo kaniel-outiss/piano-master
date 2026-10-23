@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v75 — MIDI Edition</title>
+    <title>Piano Master v76 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -54532,6 +54532,11 @@ window.rvSyncExpanded = function() {
     var p = seq[idx];
     var st = typeof window._rv_state === 'function' ? window._rv_state() : {};
     var cat = st.cat || 'CAT06';
+    // v76 — pas issu des claviers (repli) : on joue l'accord du clavier n° idx
+    if (p._kb) {
+      if (typeof playChord === 'function') { if (typeof initAudio === 'function') initAudio(); playChord(p._kb, 'simultaneous'); }
+      return;
+    }
     var tonRoot = (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C';
 
     // Cas gamme : note isolée
@@ -54680,8 +54685,18 @@ window.rvSyncExpanded = function() {
     var st = typeof window._rv_state === 'function' ? window._rv_state() : {};
     var cat = st.cat || 'CAT06';
 
+    // v76 — le son est déverrouillé ICI, pendant le clic : sur Android un contexte
+    // audio créé/repris dans un minuteur (le 1er pas part 300 ms plus tard) reste muet
+    try { if (typeof initAudio === 'function') initAudio(); } catch(e) {}
     // CAT01 (Gammes) : séquence note par note — construite par _rvBuildSeq
     _demoSeq = _rvBuildSeq(st, cat);
+    // v76 — familles sans séquence PROG (descentes de voicings, etc.) : la démo
+    // joue les accords des claviers du panneau, ceux que la portée montre déjà
+    if (!_demoSeq.length) {
+      _demoSeq = _rvColsFromKeyboards().map(function(c){
+        return { _kb: c.notes.map(function(n){ return { note: PM_NNS[n.m % 12], octave: Math.floor(n.m / 12) - 1 }; }) };
+      });
+    }
 
     if (!_demoSeq.length) { console.warn('[DEMO] Séquence vide'); return; }
     _demoStep = 0;
