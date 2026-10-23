@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v76 — MIDI Edition</title>
+    <title>Piano Master v77 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -53010,6 +53010,28 @@ var FRAG_TYPES = {
 };
 
 var PROG={
+  /* ── v77 — séquences des familles qui n'en avaient pas (clavier, démo, portée vides).
+     Renversements choisis pour garder les notes communes, comme le disent les consignes
+     (DESC) : I–IV–I garde Mi, ii–V–I garde Fa et Ré, etc. Lignes de MG : type 'interval'
+     (la 1re valeur = repère de l'étiquette, non jouée), jouées dans le registre du mini-clavier. */
+  'CAD-I-IV-I':  [{s:0,ct:'maj7',lbl:'I'},{s:5,ct:'maj7',inv:2,oct:3,lbl:'IV'},{s:0,ct:'maj7',lbl:'I'}],
+  'CAD-bVII':    [{s:0,ct:'maj7',lbl:'I'},{s:10,ct:'maj7',inv:1,oct:3,lbl:'♭VII'},{s:5,ct:'maj7',inv:2,oct:3,lbl:'IV'},{s:0,ct:'maj7',lbl:'I'}],
+  'CAD-IVm':     [{s:0,ct:'maj7',lbl:'I'},{s:5,ct:'m7',inv:2,oct:3,lbl:'IVm'},{s:0,ct:'maj7',lbl:'I'}],
+  'CAD-II-V-I':  [{s:2,ct:'m7',lbl:'ii'},{s:7,ct:'7',inv:2,oct:3,lbl:'V'},{s:0,ct:'maj7',lbl:'I'}],
+  'CAD-II-V-Im': [{s:2,ct:'m7b5',lbl:'iiø'},{s:7,ct:'7',inv:2,oct:3,lbl:'V'},{s:0,ct:'m7',lbl:'i'}],
+  'PASS-bII7':   [{s:1,ct:'7',lbl:'♭II7'},{s:0,ct:'maj7',lbl:'I'}],
+  'PASS-bVI':    [{s:8,ct:'maj7',lbl:'♭VI'},{s:0,ct:'maj7',lbl:'I'}],
+  'TRITOSUB':    [{s:7,ct:'7',inv:2,oct:3,lbl:'V7'},{s:0,ct:'maj7',lbl:'I'},{s:1,ct:'7',lbl:'♭II7'},{s:0,ct:'maj7',lbl:'I'}],
+  'CHROM-APP':   [{s:1,ct:'maj7',lbl:'↓ haut'},{s:0,ct:'maj7',lbl:'I'},{s:11,ct:'maj7',lbl:'↑ bas'},{s:0,ct:'maj7',lbl:'I'}],
+  'MG-OCT':      [{s:0,ct:'interval',s2:0,s3:12,lbl:'I'},{s:5,ct:'interval',s2:5,s3:17,lbl:'IV'},{s:7,ct:'interval',s2:7,s3:19,lbl:'V'},{s:0,ct:'interval',s2:0,s3:12,lbl:'I'}],
+  'MG-SHELL':    [{s:2,ct:'interval',s2:5,s3:12,lbl:'ii 3-7'},{s:7,ct:'interval',s2:11,s3:17,lbl:'V 3-7'},{s:0,ct:'interval',s2:4,s3:11,lbl:'I 3-7'}],
+  'MG-WALK':     [{s:0,ct:'interval',s2:0,lbl:'C 1'},{s:0,ct:'interval',s2:2,lbl:'2'},{s:0,ct:'interval',s2:4,lbl:'3'},{s:0,ct:'interval',s2:3,lbl:'4 app.'},
+                  {s:5,ct:'interval',s2:5,lbl:'F 1'},{s:5,ct:'interval',s2:7,lbl:'2'},{s:5,ct:'interval',s2:9,lbl:'3'},{s:5,ct:'interval',s2:6,lbl:'4 app.'},
+                  {s:7,ct:'interval',s2:7,lbl:'G 1'},{s:7,ct:'interval',s2:9,lbl:'2'},{s:7,ct:'interval',s2:11,lbl:'3'},{s:7,ct:'interval',s2:13,lbl:'4 app.'},{s:0,ct:'interval',s2:12,lbl:'C'}],
+  'MG-STRIDE':   [{s:0,ct:'interval',s2:0,s3:12,lbl:'1 basse'},{s:0,ct:'interval',s2:16,s3:19,s4:23,lbl:'2 accord'},{s:0,ct:'interval',s2:7,s3:19,lbl:'3 basse'},{s:0,ct:'interval',s2:16,s3:19,s4:23,lbl:'4 accord'}],
+  'MG-OST':      [{s:0,ct:'interval',s2:0,lbl:'Do'},{s:0,ct:'interval',s2:7,lbl:'Sol'},{s:0,ct:'interval',s2:12,lbl:'Do'},{s:0,ct:'interval',s2:7,lbl:'Sol'}],
+  'MG-ALB':      [{s:0,ct:'interval',s2:0,lbl:'5'},{s:0,ct:'interval',s2:7,lbl:'1'},{s:0,ct:'interval',s2:4,lbl:'2'},{s:0,ct:'interval',s2:7,lbl:'1'}],
+  'MG-SYNT':     [{s:0,ct:'interval',s2:0,s3:12,lbl:'1'},{s:0,ct:'interval',s2:0,s3:12,lbl:'3'},{s:5,ct:'interval',s2:5,s3:17,lbl:'et-4 ↷'},{s:5,ct:'interval',s2:5,s3:17,lbl:'1 (tenu)'}],
   /* CAT01 — Gammes (7 notes affichées sur clavier) */
   'SCL-MAJ':    [{s:0,ct:'major',lbl:'I'}],
   'SCL-MIN-N':  [{s:0,ct:'minor',lbl:'I'}],
@@ -54344,11 +54366,11 @@ window.rvSetVoicing = function(fam, vkey) {
   if (st.sel) window.rvFillPanel(st.sel);
 };
 
-function drawChord(cid, root, ct, withSound, voicingKey, inversion) {
+function drawChord(cid, root, ct, withSound, voicingKey, inversion, baseOct) {
   if (typeof clearKeyboard === 'function') clearKeyboard(cid);
   if (typeof generateChord !== 'function' || typeof displayNotesOnKeyboard !== 'function') return;
   try {
-    var notes = generateChord(root, ct, inversion || 0, 4);
+    var notes = generateChord(root, ct, inversion || 0, baseOct || 4); // v77 : octave de départ (renversements liés)
     if (!notes.length) return;
     /* Span jouable : ramener individuellement les notes qui dépassent 10 demi-tons */
     if (notes.length > 0) {
@@ -54507,7 +54529,7 @@ window.rvSyncExpanded = function() {
     } else if (p.ct && typeof generateChord === 'function') {
       var ri2 = NNS.indexOf(tonRoot);
       var chordRoot = NNS[((ri2+(p.s||0))%12+12)%12];
-      try { notes = generateChord(chordRoot, p.ct, p.inv||0, 4); } catch(e){}
+      try { notes = generateChord(chordRoot, p.ct, p.inv||0, p.oct||4); } catch(e){}
       /* Appliquer le voicing natif de la famille — comme Fragments (VOI-DESC) */
       var st2 = typeof window._rv_state === 'function' ? window._rv_state() : {};
       var fam2_demo = st2.fam || '';
@@ -55460,7 +55482,7 @@ window.rvFillPanel=function(skillId){
           'VOI-SPREAD':'spread','VOI-OPEN':'open','VOI-CLUSTER':'cluster'
         };
         var effectiveVoicing = FAM_NATIVE_VOI[fam] || activeVoicing;
-        drawChord(cid, chordRoot, p.ct, false, effectiveVoicing, p.inv || 0);
+        drawChord(cid, chordRoot, p.ct, false, effectiveVoicing, p.inv || 0, p.oct);
         /* CAT02 — ajouter la tonique à l'octave sup après drawChord */
         if (cat === 'CAT02') {
           (function(_cid, _cr) {
