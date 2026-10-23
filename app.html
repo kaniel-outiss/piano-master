@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v72 — MIDI Edition</title>
+    <title>Piano Master v73 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -3329,7 +3329,12 @@ document.head.appendChild(_lockStyle);
 
             <!-- Panel Options -->
             <div id="panel-options" class="sidebar-section" style="display:none">
-                <div class="sidebar-label">Audio</div>
+                <div class="sidebar-label">Lecture</div>
+                <div class="toggle-row">
+                    <span class="toggle-label">🎼 Portée sous les claviers</span>
+                    <button class="toggle on" id="togglePmStf" onclick="this.classList.toggle('on');pmStfToggle(this.classList.contains('on'))"></button>
+                </div>
+                <div class="sidebar-label" style="margin-top:12px">Audio</div>
                 <div class="toggle-row">
                     <span class="toggle-label">Son activé</span>
                     <button class="toggle on" id="toggleSound" onclick="this.classList.toggle('on')"></button>
@@ -55803,6 +55808,119 @@ document.addEventListener('midiNoteOn', function (e) {
 });
 window.pmHnSync = pmHnSync; window.pmHnSetLen = pmHnSetLen; window.pmHnReset = pmHnReset;
 window.pmHnRender = pmHnRender; window.pmHnAttemptPct = pmHnAttemptPct; window.pmHnApresEssai = pmHnApresEssai;
+
+/* ════════════════════════════════════════════════════════════════════════
+   🎼 v73 — PORTÉE COMPAGNE DE CHAQUE CLAVIER
+   Tous les modules affichent leurs notes par displayNotesOnKeyboard (≈40
+   claviers : Harmonie, Renversements, Construction, ii-V-I, Voice leading,
+   Turnarounds, Vamp, Progressions, Grille, Résolutions…). On l'enveloppe :
+   après chaque affichage, une portée compacte (moteur Garden) écrit les mêmes
+   notes juste sous le clavier. Purement illustratif — l'appel d'origine
+   s'exécute d'abord et à l'identique ; une erreur ici ne remonte jamais.
+   · Skills (rv-*) et Hanon ont leur portée dédiée : exclus.
+   · Mains (handsData) → grande portée MG/MD ; sinon clé choisie au registre.
+   · Interrupteur global « 🎼 » (localStorage pm_stf_on), coupé = rien n'est inséré.
+   ════════════════════════════════════════════════════════════════════════ */
+const PM_STF_FN = { tonic:'#93c5fd', root:'#fbbf24', mediant:'#fde047', dominant:'#fdba74',
+                    seventh:'#d8b4fe', extension:'#6ee7b7', ninth:'#6ee7b7', fourth:'#6ee7b7' };
+const PM_STF_PC = { C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11 };
+function pmStfOn() { try { return localStorage.getItem('pm_stf_on') !== '0'; } catch (e) { return true; } }
+function pmStfToggle(on) {
+  try { localStorage.setItem('pm_stf_on', on ? '1' : '0'); } catch (e) {}
+  if (!on) document.querySelectorAll('.pm-stf-comp').forEach(function (d) { d.remove(); });
+  if (typeof showToast === 'function') showToast(on ? '🎼 Portées sous les claviers : activées (s’affichent au prochain accord)' : '🎼 Portées sous les claviers : masquées', 'info');
+}
+function _pmStfExclu(id, el) {
+  if (/^rv/i.test(id) || /^cid/.test(id)) return true;
+  return !!(el.closest && el.closest('#rv-panel-pianos,#rv-panel-pianos-expanded,#pm-hn-panel,#midi-live-keys'));
+}
+function _pmStfSlot(id, el) {
+  let d = document.getElementById(id + '-pmstf');
+  if (d) return d;
+  // sous le conteneur défilant du clavier (son parent overflow-x), sinon sous le clavier
+  // hors du cadre du clavier (souvent overflow:hidden à hauteur fixe) : sous le
+  // « …-shell » s'il existe, sinon sous le conteneur défilant, sinon sous le clavier
+  let anchor = el, par = el.parentElement;
+  try { if (par && /auto|scroll/.test(getComputedStyle(par).overflowX)) anchor = par; } catch (e) {}
+  const shell = el.closest && el.closest('[id$="-shell"]');
+  if (shell && shell.parentElement) anchor = shell;
+  d = document.createElement('div');
+  d.id = id + '-pmstf'; d.className = 'pm-stf-comp';
+  d.style.cssText = 'display:flex;justify-content:center;align-items:center;margin:4px auto 0;position:relative';
+  anchor.insertAdjacentElement('afterend', d);
+  return d;
+}
+function pmStfCompanion(id, notes, handsData) {
+  if (!pmStfOn() || typeof pmStfDraw !== 'function') return;
+  const el = document.getElementById(id);
+  if (!el || _pmStfExclu(id, el)) return;
+  const L = (handsData && handsData.leftHand) || [], R = (handsData && handsData.rightHand) || [];
+  const seen = {}, ns = [];
+  (notes || []).forEach(function (n) {
+    if (!n || PM_STF_PC[n.note] == null || typeof n.octave !== 'number') return;
+    const m = (n.octave + 1) * 12 + PM_STF_PC[n.note]; if (seen[m]) return; seen[m] = 1;
+    const o = { m: m, col: PM_STF_FN[n.function || n.fn] || '#E8ECF5' };
+    ns.push(o);
+  });
+  const slot = _pmStfSlot(id, el);
+  if (!ns.length) { slot.innerHTML = ''; return; }
+  // clavier masqué (module pas encore affiché) : impossible de mesurer la place —
+  // on attend qu'il apparaisse pour dessiner et vérifier
+  if (el.offsetParent === null) {
+    slot.innerHTML = ''; slot._pmArgs = [id, notes, handsData];
+    if (!slot._pmIO && window.IntersectionObserver) {
+      slot._pmIO = new IntersectionObserver(function (ents) {
+        if (!ents.some(function (x) { return x.isIntersecting; }) || !slot._pmArgs) return;
+        const a = slot._pmArgs; slot._pmArgs = null;
+        try { pmStfCompanion(a[0], a[1], a[2]); } catch (e) {}
+      });
+      slot._pmIO.observe(el);
+    }
+    return;
+  }
+  slot._pmArgs = null;
+  let key = 0;
+  try { if (typeof selectedRoot !== 'undefined' && PM_STF_PC[selectedRoot] != null) key = PM_STF_PC[selectedRoot]; } catch (e) {}
+  // clé au registre, grande portée seulement si l'accord s'étale (règle Garden)
+  const body = el.closest && (el.closest('.module-body') || el.closest('.module-panel'));
+  // conteneurs défilants entre le clavier et le module (ex. vamp-slots-container)
+  const scrollers = [];
+  for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) {
+    try { if (/auto|scroll/.test(getComputedStyle(e).overflowY)) scrollers.push(e); } catch (x) {}
+    if (e === body) break;
+  }
+  if (body && scrollers.indexOf(body) < 0) scrollers.push(body);
+  // progressions (≥ 3 claviers dans le même conteneur) : tout ou rien — pas
+  // une portée sur quatre rangées ; ces écrans relèvent d'une portée de séquence
+  // compté à l'échelle du module (chaque clavier a souvent son propre conteneur défilant)
+  const mod = el.closest('.module-panel') || body;
+  const nKb = mod ? Array.prototype.filter.call(mod.querySelectorAll('.piano-keys'), function (k) { return k.offsetParent !== null; }).length : 0;
+  if (nKb >= 3 && !/^(harm-|cpr-)/.test(id)) { slot.innerHTML = ''; return; }
+  const debord = function () { return scrollers.map(function (e) { return Math.max(0, e.scrollHeight - e.clientHeight); }); };
+  // on mesure le cadre visible de chaque clavier (son conteneur), pas les touches
+  const kbs = body ? Array.prototype.map.call(body.querySelectorAll('.piano-keys'), function (k) { return k.parentElement || k; }) : [];
+  slot.innerHTML = '';
+  const avant = debord(), h0 = kbs.map(function (k) { return k.getBoundingClientRect().height; });
+  slot.innerHTML = '<div style="width:96px">' + pmStfDraw([{ notes: ns, dur: 'w' }], { sp: 6, key: key }) + '</div>';
+  // ni écraser un clavier (mises en page flexibles : elles rétrécissent au lieu de défiler)
+  const ecrase = kbs.some(function (k, i) { return k.getBoundingClientRect().height < h0[i] - 2; });
+  // ni augmenter le débordement d'aucun conteneur (un écran qui tient doit continuer à tenir)
+  const apres = debord();
+  if (ecrase || apres.some(function (v, i) { return v > avant[i] + 2; })) slot.innerHTML = '';
+}
+(function () {
+  if (typeof displayNotesOnKeyboard !== 'function' || displayNotesOnKeyboard._pmStf) return;
+  const _orig = displayNotesOnKeyboard;
+  const wrapped = function (containerId, notes, showLabels, handsData) {
+    const r = _orig.apply(this, arguments);
+    try { pmStfCompanion(containerId, notes, handsData); } catch (e) {}
+    return r;
+  };
+  wrapped._pmStf = true;
+  window.displayNotesOnKeyboard = wrapped;
+})();
+window.pmStfToggle = pmStfToggle; window.pmStfOn = pmStfOn;
+try { const _tg = document.getElementById('togglePmStf'); if (_tg && !pmStfOn()) _tg.classList.remove('on'); } catch (e) {}
 
 </script>
 </body>
