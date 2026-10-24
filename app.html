@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v79 — MIDI Edition</title>
+    <title>Piano Master v80 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -55770,7 +55770,7 @@ function pmStfVL(HD,cols,sp,o){let s='';
     s+='</g>';}
   return s;}
 function pmStfDraw(cols,o){
-  o=o||{};const mode=o.mode||'color';if(mode==='off')return '';
+  o=o||{};const STEMS={};const mode=o.mode||'color';if(mode==='off')return '';
   const sp=o.sp||10,key=o.key==null?0:o.key;
   const all=[];cols.forEach(function(c){c.notes.forEach(function(n){all.push(n);});});
   if(!all.length)return '';
@@ -55856,13 +55856,24 @@ function pmStfDraw(cols,o){
       /* hampe : du grave à l'aigu, à droite des têtes (sauf fantômes seuls) */
       const real=N.filter(function(q){return !q.n.ghost;});
       if(real.length&&c.dur!=='w'){const lo=real[0],hi=real[real.length-1];
-        const stx=cx+sp*(o.deg&&cRp!=null&&mode!=='read'?.95:.66);out+='<line x1="'+stx+'" x2="'+stx+'" y1="'+(bot-lo.step*sp/2-sp*.15)+'" y2="'+(bot-hi.step*sp/2-sp*3.2)+'" stroke="#E8ECF5" stroke-width="'+(sp*.11)+'"/>';}
+        const stx=cx+sp*(o.deg&&cRp!=null&&mode!=='read'?.95:.66);out+='<line x1="'+stx+'" x2="'+stx+'" y1="'+(bot-lo.step*sp/2-sp*.15)+'" y2="'+(bot-hi.step*sp/2-sp*3.2)+'" stroke="#E8ECF5" stroke-width="'+(sp*.11)+'"/>';
+        (STEMS[si]=STEMS[si]||[]).push({ci:ci,x:stx,y:bot-hi.step*sp/2-sp*3.2});}
     });
     if(c.lb)out+='<text x="'+cx+'" y="'+(o.lb?sp*2.4:sp*1.3)+'" text-anchor="middle" font-family="Inter,Arial" font-weight="700" font-size="'+(sp*1.1)+'" fill="#B8C0DA">'+c.lb+'</text>';
     if(c.hit)out+='<rect '+c.hit+' x="'+(cx-sp*2.7)+'" y="0" width="'+(CW[ci]-sp*.4)+'" height="'+H+'" rx="'+sp+'" fill="transparent"/>'; /* 🎷 v11 : colonne touchable */
     if(c.bar){const bx=cx-sp*2.9+CW[ci];out+='<line x1="'+bx+'" x2="'+bx+'" y1="'+topY(0)+'" y2="'+(topY(staves.length-1)+hS)+'" stroke="#B8C0DA" stroke-width="'+(sp*(c.bar===2?.35:.12))+'"/>';}
     if(c.volta)out+='<path d="M'+(cx-sp*2.6)+','+(sp*3.4)+' V'+(sp*2.6)+' H'+(cx-sp*2.6+CW[ci]-sp*.6)+'" fill="none" stroke="#F5C842" stroke-width="'+(sp*.12)+'"/><text x="'+(cx-sp*2.3)+'" y="'+(sp*3.5)+'" font-family="Inter,Arial" font-weight="800" font-size="'+(sp*.9)+'" fill="#F5C842">'+c.volta+'.</text>';
     out+='</g>';
+  });
+  /* v80 — ligatures : o.beam = notes par groupe (2 croches, 4 doubles, 3 triolets),
+     o.beams = 1 ou 2 barres ; hampes prolongées jusqu'à la barre (plate, au plus haut du groupe) */
+  if(o.beam>1)Object.keys(STEMS).forEach(function(si){
+    const G={};STEMS[si].forEach(function(t){const g=Math.floor(t.ci/o.beam);(G[g]=G[g]||[]).push(t);});
+    Object.keys(G).forEach(function(g){const T=G[g];if(T.length<2)return;
+      const yb=Math.min.apply(null,T.map(function(t){return t.y;})),x1=T[0].x,x2=T[T.length-1].x,th=sp*.45;
+      T.forEach(function(t){if(t.y>yb)out+='<line x1="'+t.x+'" x2="'+t.x+'" y1="'+t.y+'" y2="'+yb+'" stroke="#E8ECF5" stroke-width="'+(sp*.11)+'"/>';});
+      for(let b=0;b<(o.beams||1);b++){const y=yb+b*sp*.8;out+='<rect x="'+(x1-sp*.05)+'" y="'+y+'" width="'+(x2-x1+sp*.1)+'" height="'+th+'" fill="#E8ECF5"/>';}
+      if(o.tuplet)out+='<text x="'+((x1+x2)/2)+'" y="'+(yb-sp*.4)+'" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="'+(sp*1.1)+'" fill="#B8C0DA">'+o.tuplet+'</text>';});
   });
   if(o.vl&&cols.length>1)out+=pmStfVL(HD,cols,sp,o);
   if(o.lb)out+='<text x="'+x0+'" y="'+(sp*1.1)+'" font-family="Inter,Arial" font-weight="700" font-size="'+(sp*1.05)+'" fill="#7A85A8">'+o.lb+'</text>';
@@ -55875,6 +55886,15 @@ function pmStfDraw(cols,o){
 // Les deux cellules du livre, dans le même registre : la 1re mesure montante (sur la
 // tonique) et la DERNIÈRE mesure descendante (celle qui revient à la tonique).
 // MD clé de sol dès Do 4, MG clé de fa dès Do 3 ; doigtés au-dessus de chaque main.
+// v80 — la figure de note du métronome (« Figure de note ») pilote la portée et l'écoute
+function pmHnFig() {
+  let v = 2; try { v = parseFloat(MT.subdivision) || 2; } catch (e) {}
+  if (v >= 4) return { beam: 4, beams: 2, nb: 4, lb: '♬ doubles-croches' };
+  if (v === 3) return { beam: 3, beams: 1, tuplet: '3', nb: 3, lb: '♪³ triolets' };
+  if (v >= 2) return { beam: 2, beams: 1, nb: 2, lb: '♪ croches' };
+  if (v >= 1) return { beam: 0, nb: 1, lb: '♩ noires' };
+  return { beam: 0, nb: 0.5, dur: 'h', lb: '𝅗𝅥 blanches' };
+}
 function pmHnMotifCols(cell) {
   const ex = PMHN.ex, up = cell === 'a';
   const deg = up ? ex.a : ex.d, fMD = up ? ex.fa : ex.fd, fMG = up ? ex.la : ex.ld;
@@ -55895,13 +55915,14 @@ function pmHnMotifSvg(cells) {
     if (k < cells.length - 1) cc[cc.length - 1].bar = 2;
     cols = cols.concat(cc);
   });
-  const D = PMHN.demo;
+  const D = PMHN.demo, F = pmHnFig();
   cols.forEach(function (c) {
     const on = D && D.cell === c.cell && D.i === c.i;
     c.notes.forEach(function (n) { if (on) n.col = '#F5C842'; });
     c.wf = cols.length > 8 ? 0.42 : 0.55;
+    if (F.dur) c.dur = F.dur;
   });
-  return pmStfDraw(cols, { sp: 9, key: 0, ks: true });
+  return pmStfDraw(cols, { sp: 9, key: 0, ks: true, beam: F.beam, beams: F.beams, tuplet: F.tuplet });
 }
 // 🔊 écoute des motifs : au tempo du métronome, en doubles-croches (4 notes par temps)
 function pmHnDemo(which) {
@@ -55911,7 +55932,7 @@ function pmHnDemo(which) {
   const order = which === 'ad' ? ['a', 'd'] : [which];
   const steps = []; order.forEach(function (c) { pmHnMotifCols(c).forEach(function (col) { steps.push(col); }); });
   let bpm = 80; try { bpm = Math.round(MT.tempoCurrent || MT.tempoStart || 80); } catch (e) {}
-  const ms = Math.max(110, Math.round(60000 / bpm / 4));
+  const ms = Math.max(90, Math.round(60000 / bpm / pmHnFig().nb));   // figure du métronome
   let k = 0;
   const tick = function () {
     if (k >= steps.length || !document.getElementById('pm-hn-panel')) { PMHN.demo = null; pmHnRender(); return; }
@@ -55924,10 +55945,17 @@ function pmHnDemo(which) {
   tick();
 }
 window.pmHnDemo = pmHnDemo;
+(function () {
+  if (typeof mtSetSubdiv !== 'function' || mtSetSubdiv._pmHn) return;
+  const _o = mtSetSubdiv;
+  const w = function () { const r = _o.apply(this, arguments); try { if (PMHN.id) pmHnRender(); } catch (e) {} return r; };
+  w._pmHn = true; window.mtSetSubdiv = w;
+})();
 function pmHnSvg() {
   const N = PMHN.seq.notes, F = PMHN.seq.fg, L = PMHN.ex.a.length;
   const _pw = (document.getElementById('pm-hn-panel') || {}).clientWidth || 300;
-  const W8 = _pw < 380 ? 6 : 8, i0 = Math.floor(PMHN.ptr / W8) * W8, i1 = Math.min(N.length, i0 + W8);
+  const FG = pmHnFig();
+  const W8 = (FG.beam === 4 || _pw >= 380) ? 8 : 6, i0 = Math.floor(PMHN.ptr / W8) * W8, i1 = Math.min(N.length, i0 + W8);
   const cols = [];
   for (let i = i0; i < i1; i++) {
     const cur = i === PMHN.ptr, bad = cur && PMHN.badAt === i;
@@ -55941,7 +55969,8 @@ function pmHnSvg() {
     cols.push({ notes: notes, wf: 0.45, lb: i % L === 0 ? 'm. ' + (Math.floor(i / L) + 1) : null,
                 bar: (i + 1) % L === 0 || i === N.length - 1 ? 1 : 0 });
   }
-  return pmStfDraw(cols, { sp: 9, key: 0, ks: true });
+  if (FG.dur) cols.forEach(function (c) { c.dur = FG.dur; });
+  return pmStfDraw(cols, { sp: 9, key: 0, ks: true, beam: FG.beam, beams: FG.beams, tuplet: FG.tuplet });
 }
 
 function pmHnRender() {
@@ -55953,7 +55982,7 @@ function pmHnRender() {
   if (cadSub) cadSub.style.display = actif ? 'none' : '';
   // v79 — le cadran BPM se fait plus petit pendant un Hanon : place pour les deux portées
   const hud = document.getElementById('pm-hud-bpm');
-  if (hud) { hud.style.width = actif ? '150px' : ''; hud.style.height = actif ? '150px' : ''; }
+  if (hud) { hud.style.width = actif ? '136px' : ''; hud.style.height = actif ? '136px' : ''; }
   if (!actif) { if (p) p.remove(); return; }
   if (!p) {
     const beats = document.getElementById('mt-beats-grid');
@@ -55983,7 +56012,7 @@ function pmHnRender() {
       + '<span style="font-size:9px;color:var(--text-dim)">🔊</span>'
       + pill(PMHN.demo && PMHN.demo.w === 'a', "pmHnDemo('a')", '▶↗') + pill(PMHN.demo && PMHN.demo.w === 'd', "pmHnDemo('d')", '▶↘') + pill(PMHN.demo && PMHN.demo.w === 'ad', "pmHnDemo('ad')", '▶↗↘')
       + (PMHN.demo ? pill(true, "pmHnDemo('stop')", '■') : '')
-      + '<span style="font-size:8.5px;color:var(--text-dim);margin-left:auto">' + nUp + ' notes/mes. · notes non contrôlées</span></div>'
+      + '<span title="Figure de note du métronome · tes notes ne sont pas contrôlées" style="font-size:9px;color:var(--text-dim);margin-left:auto;white-space:nowrap">' + pmHnFig().lb.replace('doubles-croches', 'doubles') + '</span></div>'
       + '<div style="font-size:9px;margin-top:2px"><b style="color:#3ECF8E">↗ ×13</b> <span style="color:var(--text-dim)">+1 degré/mesure</span> · <b style="color:#4F9EFF">↘ ×14</b> <span style="color:var(--text-dim)">depuis le haut → tonique</span></div>'
       + pmHnMotifSvg(['a']) + pmHnMotifSvg(['d'])
       + (PMHN.num === 31 ? '<div style="font-size:9px;color:#f5a623;margin-top:2px">⚠ N°31 (mouvement contraire) : encodage simplifié, à vérifier au clavier.</div>' : '');
