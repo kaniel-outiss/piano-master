@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v80 — MIDI Edition</title>
+    <title>Piano Master v81 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -54896,7 +54896,14 @@ window.rvSyncExpanded = function() {
       el.innerHTML = '<div style="background:#0c0f1a;border:1px solid var(--border);border-radius:8px;padding:4px 8px 2px">'
         + '<div style="font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--text-dim);font-family:var(--font-mono)">🎼 LE TRAVAIL À FAIRE'
         + (seq.length > cols.length ? ' · ' + seq.length + ' pas' : '') + '</div>'
-        + pmStfDraw(cols, { sp: 9, key: key, scale: 1.6, vl: cols.length > 1 && cols.some(function(c){ return c.notes.length > 1; }) }) + '</div>';
+        + (function () {
+            // v81 — ligne de notes successives (gamme, arpège, basse) : ligatures selon la figure du métronome
+            const ligne = cols.length > 1 && cols.every(function (c) { return c.notes.length === 1; });
+            const F = (ligne && typeof pmHnFig === 'function') ? pmHnFig() : {};
+            if (F.dur) cols.forEach(function (c) { c.dur = F.dur; });
+            return pmStfDraw(cols, { sp: 9, key: key, scale: 1.6, vl: cols.length > 1 && cols.some(function(c){ return c.notes.length > 1; }),
+                                     beam: F.beam, beams: F.beams, tuplet: F.tuplet });
+          })() + '</div>';
     } catch(e) { el.innerHTML = ''; }
   };
 
@@ -55948,7 +55955,7 @@ window.pmHnDemo = pmHnDemo;
 (function () {
   if (typeof mtSetSubdiv !== 'function' || mtSetSubdiv._pmHn) return;
   const _o = mtSetSubdiv;
-  const w = function () { const r = _o.apply(this, arguments); try { if (PMHN.id) pmHnRender(); } catch (e) {} return r; };
+  const w = function () { const r = _o.apply(this, arguments); try { if (PMHN.id) pmHnRender(); } catch (e) {} try { if (window.rvStaffRender) window.rvStaffRender(); } catch (e) {} return r; };
   w._pmHn = true; window.mtSetSubdiv = w;
 })();
 function pmHnSvg() {
