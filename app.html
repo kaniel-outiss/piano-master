@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v81 — MIDI Edition</title>
+    <title>Piano Master v82 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -13522,6 +13522,8 @@ function scintPlayScale() {
 function scintPlayTarget() {
     if (!SCINT_GAME.target) return;
     const { noteA, noteB } = SCINT_GAME.target;
+    // v82 — « trouve le degré » n'a pas d'intervalle à faire entendre : on joue la gamme
+    if (!noteA || !noteB) { scintPlayScale(); return; }
     playNote(noteA.note, noteA.octave, 0.5);
     setTimeout(() => playNote(noteB.note, noteB.octave, 0.5), 450);
 }
@@ -36983,10 +36985,6 @@ function initModulePreacher() {
 
       <!-- ═══ COLONNE GAUCHE : sélecteurs ═══ -->
       <div style="overflow-y:auto;padding:14px 12px 14px 16px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
-        <div>
-          <div style="font-size:15px;font-weight:800;margin-bottom:3px">🎤 Fill-in Builder</div>
-          <p style="font-size:11px;color:var(--text-muted);margin:0">Le groove tourne, s'arrête, tu joues ton fill</p>
-        </div>
 
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
         <div style="font-size:16px;font-weight:800">✊ Preacher Chords</div>
@@ -41037,7 +41035,9 @@ window.pmFullRestore = pmFullRestore;
         ['MIQ_STATE','miqStop'],     ['DEGQ_STATE','degqStop'],
         ['GOSPEL_STATE','gospelStop'], ['CADQ_STATE','cadqStop'],
         ['SUBV7Q_STATE','subv7qStop'], ['VOICEQ_STATE','voiceqStop'],
-        ['IIVIQ_STATE','iiviqStop'], ['SDQ_STATE','sdqStop']
+        ['IIVIQ_STATE','iiviqStop'], ['SDQ_STATE','sdqStop'],
+        // v82 — oubliés : ils continuaient d'écouter le clavier MIDI hors de l'écran
+        ['CV','cvStop'],             ['CMI','cmiStop']
     ];
     const _get = n => { try { return eval('typeof ' + n + ' !== "undefined" ? ' + n + ' : null'); } catch(e) { return null; } };
 
@@ -54645,6 +54645,19 @@ window.rvSyncExpanded = function() {
   // v71 — la séquence de la démo, sans effet de bord : rvDemoPlay ET la portée
   // d'illustration (rvStaffRender) lisent la même source, donc montrent le même travail.
   function _rvBuildSeq(st, cat) {
+    // v82 — runs et licks (Fills & Runs) : des NOTES successives, pas des accords
+    // (la table PROG ne leur donnait que « I départ / I arrivée » → accords plaqués)
+    var RUNS05 = { 'FILL-PENTA-R': [0,2,4,7,9,12,9,7,4,2,0],   // DESC : Do–Ré–Mi–Sol–La–Do, montée puis retour
+                   'FILL-CHROM-R': [-3,-2,-1,0],                // DESC : La–Si♭–Si → Do (approche par le bas)
+                   'FILL-LICK':    [0,2,4,7,9,11,12] };         // lick hexatonique qui résout sur la tonique
+    if (cat === 'CAT05' && RUNS05[st.fam]) {
+      var tr05 = (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C';
+      var N05 = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'], r05 = N05.indexOf(tr05); if (r05 < 0) r05 = 0;
+      return RUNS05[st.fam].map(function (iv, k) {
+        var a = 60 + r05 + iv;
+        return { _noteOnly: { note: N05[((a % 12) + 12) % 12], octave: Math.floor(a / 12) - 1, fn: (iv % 12 === 0) ? 'tonic' : 'extension' } };
+      });
+    }
     if (cat === 'CAT01') {
       var tonRoot = (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C';
       var NS2=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
