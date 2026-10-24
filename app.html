@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v84 — MIDI Edition</title>
+    <title>Piano Master v85 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -5412,6 +5412,9 @@ const PREREQS = {
   'FILL-GOSPEL-2':{ niveau:4, prereqs:['CAD-I-IV-I','FILL-PENTA-R'], icc:3 },
   'FILL-TURN':   { niveau:4, prereqs:['CAD-II-V-I','FILL-PENTA-R'], icc:3 },
   'FILL-LICK':   { niveau:4, prereqs:['FILL-GOSPEL-2'], icc:3 },
+  'LICK-POS':    { niveau:4, prereqs:['CAD-II-V-I'], icc:3 },
+  'LICK-BERG':   { niveau:4, prereqs:['CAD-II-V-I'], icc:3 },
+  'LICK-GOS':    { niveau:2, prereqs:['SCL-PENTA-M'], icc:3 },
   'MOD-DORIEN':  { niveau:4, prereqs:['CAD-II-V-Im','SCL-MIN-N'], icc:2 },
   'MOD-LYDIEN':  { niveau:4, prereqs:['MOD-MIXO'], icc:2 },
   'MOD-bVI':     { niveau:4, prereqs:['PASS-bVI'], icc:2 },
@@ -27174,7 +27177,7 @@ function _suiviRender() {
         const h = Math.max(x.n > 0 ? 1.5 : 0.8, (x.n / max) * (H - 2));
         svg += '<rect x="' + (i * (bw + gap)).toFixed(1) + '" y="' + (H - h).toFixed(1)
             + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="' + (bw > 4 ? 1.2 : 0.4) + '" fill="'
-            + coulJour(x.n) + '"><title>Piano Master v84 — MIDI Edition</title></rect>';
+            + coulJour(x.n) + '"><title>' + x.d + ' : ' + x.n + ' reps</title></rect>';
       });
       svg += '</svg>';
       // La légende : sans elle, quatre couleurs ne se devinent pas.
@@ -49668,6 +49671,30 @@ function srPrePopuler() {
     srSave('CAT05', skills05);
     console.log('[PM_REPS] CAT05 pré-remplie :', skills05.length, 'compétences');
   }
+  // v85 — Migration licks (Practice › Licks) : 8 familles × 12 tons = 96 compétences
+  const LICK_TYPES = [
+    {key:'LICK-POS-BLUES', label:'Lick positions blues'},
+    {key:'LICK-POS-PENT',  label:'Lick positions penta'},
+    {key:'LICK-POS-DOR',   label:'Lick positions dorien'},
+    {key:'LICK-BERG-251',  label:'Lick Bergonzi ii-V-I'},
+    {key:'LICK-GOS-DESC',  label:'Lick gospel descente blues'},
+    {key:'LICK-GOS-ENC',   label:'Lick gospel encerclement'},
+    {key:'LICK-GOS-AMEN',  label:'Lick gospel amen IV-I'},
+    {key:'LICK-GOS-CHROM', label:'Lick gospel montée chrom.'},
+  ];
+  const cat05v2 = srLoad('CAT05');
+  const cat05NeedsLicks = LICK_TYPES.some(t => !cat05v2.some(sk => sk.id.indexOf(t.key + '-') === 0));
+  if (cat05NeedsLicks) {
+    const skills05b = cat05v2.slice();
+    TONALITES_FR.forEach(ton => {
+      LICK_TYPES.forEach(t => {
+        if (!skills05b.some(sk => sk.id === t.key + '-' + ton))
+          skills05b.push(_mkSkill(t.key + '-' + ton, 'CAT05', t.label + ' en ' + ton, ton));
+      });
+    });
+    srSave('CAT05', skills05b);
+    console.log('[PM_REPS] CAT05 licks ajoutés :', skills05b.length, 'compétences');
+  }
 
   // CAT15 — Réharmonisation : 5 types × 12 tons = 60 compétences
   const REHARM_TYPES = [
@@ -50730,7 +50757,7 @@ window.RC_COLORS_PUB      = RC_COLORS;
     CAT01:['SCL-MAJ','SCL-MIN-N','SCL-MIN-H','SCL-MIN-M','SCL-PENTA-M','SCL-PENTA-m','SCL-BLUES'],
     CAT02:['ARP-MAJ-MD','ARP-MAJ-MG','ARP-MAJ-2M','ARP-MIN-MD','ARP-MIN-MG','ARP-MIN-2M','ARP-MAJ7-MD','ARP-M7-MD','ARP-DOM7-MD','ARP-DIM7-MD','ARP-MAJ7-MG','ARP-M7-MG','ARP-DOM7-MG','ARP-DIM7-MG','ARP-MAJ7-2M','ARP-M7-2M','ARP-DOM7-2M','ARP-DIM7-2M'],
     CAT04:['ACC-MAJOR','ACC-MINOR','ACC-SUS4','ACC-AUG','ACC-DIM','ACC-MAJ7','ACC-M7','ACC-7','ACC-DIM7','ACC-M7B5','ACC-MAJOR-FOND','ACC-MAJOR-INV1','ACC-MAJOR-INV2','ACC-MINOR-FOND','ACC-MINOR-INV1','ACC-MINOR-INV2','ACC-DIAT-MAJ','ACC-DIAT-MIN','ACC-DIAT-MAJ7','ACC-DIAT-MIN7','ACC-DIAT-MAJ-PROG','ACC-DIAT-MIN-PROG'],
-    CAT05:['FILL-PENTA-R','FILL-CHROM-R','FILL-GOSPEL-2','FILL-TURN','FILL-APP-CHR','FILL-LICK'],
+    CAT05:['FILL-PENTA-R','FILL-CHROM-R','FILL-GOSPEL-2','FILL-TURN','FILL-APP-CHR','FILL-LICK','LICK-POS-BLUES','LICK-POS-PENT','LICK-POS-DOR','LICK-BERG-251','LICK-GOS-DESC','LICK-GOS-ENC','LICK-GOS-AMEN','LICK-GOS-CHROM'],
     CAT06:['CAD-II-V-I','CAD-IV-I','CAD-bVII-I','CAD-IV-V-I','CAD-I-IV','CAD-VI-IV','CAD-I-bVII-IV','CAD-PLAGALE','CAD-AMEN','CAD-GOSPEL-TRAD','CAD-DECEPTIVE'],
     CAT07:['MG-BASS-5','MG-BASS-WALK','MG-BASS-OCT','MG-COMP-BASE','MG-COMP-SYNC','MG-STRIDE','MG-BASS-SHELL','MG-BASS-ROOTS','MG-158','MG-138','MG-B78','MG-1358'],
     CAT08:['VC-CLOSE','VC-OPEN','VC-DROP2','VC-DROP3','VC-SHELL','VC-ROOTLESS','VC-GOSPEL','VC-QUARTAL','VC-SOWHAT','VC-DROP24','VOI-ISLAND','VOI-DESC-ROOTLESS-A-7-MD','VOI-DESC-ROOTLESS-A-7-MG','VOI-DESC-ROOTLESS-A-7-MGMD','VOI-DESC-ROOTLESS-A-9-MD','VOI-DESC-ROOTLESS-A-9-MG','VOI-DESC-ROOTLESS-A-9-MGMD','VOI-DESC-ROOTLESS-B-7-MD','VOI-DESC-ROOTLESS-B-7-MG','VOI-DESC-ROOTLESS-B-7-MGMD','VOI-DESC-ROOTLESS-B-9-MD','VOI-DESC-ROOTLESS-B-9-MG','VOI-DESC-ROOTLESS-B-9-MGMD','VOI-DESC-DROP2-7-MD','VOI-DESC-DROP2-7-MG','VOI-DESC-DROP2-7-MGMD','VOI-DESC-DROP2-9-MD','VOI-DESC-DROP2-9-MG','VOI-DESC-DROP2-9-MGMD','VOI-DESC-DROP3-7-MD','VOI-DESC-DROP3-7-MG','VOI-DESC-DROP3-7-MGMD','VOI-DESC-DROP3-9-MD','VOI-DESC-DROP3-9-MG','VOI-DESC-DROP3-9-MGMD','VOI-DESC-SHELL-7-MD','VOI-DESC-SHELL-7-MG','VOI-DESC-SHELL-7-MGMD','VOI-DESC-SHELL-9-MD','VOI-DESC-SHELL-9-MG','VOI-DESC-SHELL-9-MGMD','VOI-DESC-QUARTAL-7-MD','VOI-DESC-QUARTAL-7-MG','VOI-DESC-QUARTAL-7-MGMD','VOI-DESC-QUARTAL-9-MD','VOI-DESC-QUARTAL-9-MG','VOI-DESC-QUARTAL-9-MGMD','VOI-DESC-SOWHAT-7-MD','VOI-DESC-SOWHAT-7-MG','VOI-DESC-SOWHAT-7-MGMD','VOI-DESC-SOWHAT-9-MD','VOI-DESC-SOWHAT-9-MG','VOI-DESC-SOWHAT-9-MGMD','VOI-DESC-SPREAD-7-MD','VOI-DESC-SPREAD-7-MG','VOI-DESC-SPREAD-7-MGMD','VOI-DESC-SPREAD-9-MD','VOI-DESC-SPREAD-9-MG','VOI-DESC-SPREAD-9-MGMD','VOI-DESC-OPEN-7-MD','VOI-DESC-OPEN-7-MG','VOI-DESC-OPEN-7-MGMD','VOI-DESC-OPEN-9-MD','VOI-DESC-OPEN-9-MG','VOI-DESC-OPEN-9-MGMD','VOI-DESC-CLUSTER-7-MD','VOI-DESC-CLUSTER-7-MG','VOI-DESC-CLUSTER-7-MGMD','VOI-DESC-CLUSTER-9-MD','VOI-DESC-CLUSTER-9-MG','VOI-DESC-CLUSTER-9-MGMD'],
@@ -50856,6 +50883,14 @@ function rtRendreRepsTab() {
       {key:'FILL-TURN',     label:'Turn cad.',      emoji:'🔄' },
       {key:'FILL-APP-CHR',  label:'App. chrom.',    emoji:'🎯' },
       {key:'FILL-LICK',     label:'Lick fin',       emoji:'✨' },
+      {key:'LICK-POS-BLUES', label:'Pos. blues',    emoji:'🧩' },
+      {key:'LICK-POS-PENT',  label:'Pos. penta',    emoji:'🧩' },
+      {key:'LICK-POS-DOR',   label:'Pos. dorien',   emoji:'🧩' },
+      {key:'LICK-BERG-251',  label:'Bergonzi 251',  emoji:'📐' },
+      {key:'LICK-GOS-DESC',  label:'Desc. blues',   emoji:'✝️' },
+      {key:'LICK-GOS-ENC',   label:'Encercl. 3ce',  emoji:'✝️' },
+      {key:'LICK-GOS-AMEN',  label:'Amen IV-I',     emoji:'✝️' },
+      {key:'LICK-GOS-CHROM', label:'Montée chrom.', emoji:'✝️' },
     ],
     CAT15: [
       {key:'RH-SUBV7',   label:'SubV7',     emoji:'⚡' },
@@ -52087,6 +52122,16 @@ function buildSchema(skillId, tonalite) {
     'FILL-APP-CHR':  [11,0],             // approche demi-ton + cible
     'FILL-LICK':     [0,2,4,7,9,11],     // lick hexatonal
   };
+  // v85 — licks : la ligne du lick, note par note (classes de hauteur, transposée)
+  if (/^LICK-/.test(skillId) && typeof lkSkillLick === 'function') {
+    const famL = skillId.replace(/-[^-]+$/, ''), Lk = lkSkillLick(famL);
+    if (Lk) return {
+      type: 'note_seq',
+      label: 'Joue le lick note par note',
+      timeout: 250,
+      notes: Lk.notes.map(n => { const nn = transposeNote(root, ((n.m % 12) + 12) % 12); return { note: nn, label: nn }; })
+    };
+  }
   for (const fam in FILL_INTERVALS) {
     if (skillId.startsWith(fam + '-')) {
       const notes = FILL_INTERVALS[fam].map(i => transposeNote(root, i));
@@ -52771,6 +52816,16 @@ window._repsGetDesc = (function() {
     'FILL-APP-CHR':{ what:'Approche chromatique d\'un accord cible : jouer l\'accord à un demi-ton puis résoudre. En Do : D♭maj7 (1 temps) → Cmaj7.', how:'<b>Durée approche :</b> 1 temps ou 1 croche. <b>Voicing :</b> même shape que la cible, décalé d\'un demi-ton. <b>Effet :</b> "glissement" harmonique élégant.<br><b>Taubman:</b> Taubman: approche chromatique = micro-rotation instantanee. Dernier doigt arrive avec poids du bras complet.', why:'Herbie Hancock, Dericq passing chords. Discret mais immédiatement reconnaissable comme signe de sophistication.' },
     'FILL-LICK':   { what:'Lick de fin de section : phrase mélodique de 2–4 mesures qui conclut une section et prépare la suivante.', how:'<b>Structure :</b> tension (V7) → résolution (I) avec ornements. <b>Mémorise</b> 2-3 licks dans chaque tonalité. <b>Variations :</b> même lick en différentes positions.<br><b>Taubman:</b> Taubman: rotation legerement irreguliere pour le groove. Le corps swingue.', why:'Don Moen, Ron Kenoly entre couplet et refrain. Le lick est la signature du pianiste gospel professionnel.' },
 
+    /* v85 — Licks */
+    'LICK-POS-BLUES': { what:'Lick « positions » sur ii–V–I : la même cellule blues de 4 notes (la gamme blues de La : 1-♭3-4-♭5, en Do : La–Do–Ré–Mi♭ = 5-♭7-1-♭9 de Dm7) posée sur Dm7, puis déplacée sur G7 (Mi–Sol–La–Si♭ = 13-1-9-♯9, la couleur altérée), et résolution sur la tierce de Cmaj7.', how:'<b>Position 1</b> sur ii, <b>position 2</b> sur V : la main garde la même forme et se déplace d\'un bloc. Croches swing. <b>Dis les noms des notes</b> avant de jouer.<br><b>Taubman:</b> Taubman: une seule forme de main deplacee d\'un bloc - le bras transporte, les doigts ne s\'ecartent pas.', why:'C\'est le principe des « positions » : peu de matériau, beaucoup de son. Une cellule apprise dans 12 tonalités devient un vocabulaire réutilisable sur tous les ii–V–I.' },
+    'LICK-POS-PENT': { what:'Lick « positions » pentatonique : la cellule 1-2-3-5 de la pentatonique de Fa sur Dm7 (son Dm11), puis celle de Do sur G7 (son sus), résolution sur la tierce de I.', how:'<b>Triolet d\'attaque</b> puis croches. Même doigté 1-2-3-5 sur les deux positions. <b>Garde la pulsation</b> : le triolet ne doit pas presser.<br><b>Taubman:</b> Taubman: le triolet se joue par une petite rotation, pas par trois frappes de doigts isolees.', why:'La pentatonique posée sur la 3ce mineure (ii) puis sur la 4te (V) sonne moderne et ouverte, sans « fausse note » possible.' },
+    'LICK-POS-DOR': { what:'Lick « positions » dorien : la cellule 1-2-♭3-4 sur Dm7 (Ré–Mi–Fa–Sol), puis 5-6-♭7-8 sur G7 (Ré–Mi–Fa–Sol transposé à la quinte), résolution sur la tierce de I.', how:'<b>Quatre doigts, quatre notes</b> conjointes : idéal pour poser la main. Croches swing. Varie l\'ordre une fois le lick acquis.<br><b>Taubman:</b> Taubman: notes conjointes - le poignet reste aligne derriere le doigt qui joue.', why:'Le lick conjoint est la base du phrasé bebop : il apprend à la main à habiter une position avant de sauter.' },
+    'LICK-BERG-251': { what:'Lick Bergonzi sur ii–V–I : groupings de 4 notes enchaînés au plus près — 1345 puis 9-11-12-13 sur ii, 5679 puis 1-♭2-3-5 (♭9) sur V, 1235 sur I.', how:'<b>Une croche par note</b>, chaque groupe change de permutation (1235, 2153, 3521, 5321). <b>Chante les degrés</b> en jouant. Le ♭9 sur V prépare la résolution.<br><b>Taubman:</b> Taubman: chaque grouping est une forme - la main se place sur le groupe entier avant la premiere note.', why:'Le système Bergonzi transforme les accords en cellules mélodiques : c\'est la passerelle entre « je connais l\'accord » et « je fais une phrase dessus ».' },
+    'LICK-GOS-DESC': { what:'Lick gospel « descente blues » : 6-5-♭3→3-2-1. La blue note (♭3) glisse sur la tierce en triolet.', how:'<b>Le ♭3 et le 3</b> se jouent presque en même temps (glissé d\'un doigt de la noire à la blanche). Finis sur la tonique tenue.<br><b>Taubman:</b> Taubman: glisse du meme doigt de la touche noire a la blanche - pas de changement de doigt.', why:'C\'est la phrase la plus entendue en fin de ligne dans le gospel et le blues : la tension majeur/mineur résolue.' },
+    'LICK-GOS-ENC': { what:'Lick gospel « encerclement de la tierce » : 4 et ♭3 entourent la 3ce, puis montée 5-6-8.', how:'<b>Vise la tierce</b> : les deux notes d\'approche sont courtes, la tierce est longue. Croches swing.<br><b>Taubman:</b> Taubman: approche et cible dans la meme forme de main.', why:'L\'encerclement fait entendre la tierce comme une arrivée — le cœur de l\'accord majeur gospel.' },
+    'LICK-GOS-AMEN': { what:'Lick gospel « amen » IV → I : descente 6-5-4-3-2 sur l\'accord de IV, arrivée sur la tonique au retour sur I.', how:'<b>Sur IV</b> (Fa en Do) la descente passe par la tierce de I : la résolution est déjà dans la ligne. Termine tenu.<br><b>Taubman:</b> Taubman: descente conjointe - le bras glisse vers la gauche, les doigts restent souples.', why:'La cadence plagale « amen » est la signature du gospel : ce lick la chante à la main droite.' },
+    'LICK-GOS-CHROM': { what:'Lick gospel « montée chromatique de fin » : 5-♭6-6-♭7-7-8 sur V → I.', how:'<b>Doigté chromatique</b> 1-3 / 1-2-3 : pouce sur les blanches, 3 sur les noires. Ralentis à peine sur la dernière note.<br><b>Taubman:</b> Taubman: pouce sur les blanches, 3 sur les noires - le poignet monte et descend avec les touches noires.', why:'La montée chromatique est la fin de section par excellence : elle « pousse » vers la tonique.' },
+
     /* CAT15 — Réharmonisation */
     'RH-SUBV7':   { what:'Réharmonisation par SubV7 : remplacer le V7 par le dom7 à distance de triton. En Do : G7 → D♭7.', how:'<b>Contexte :</b> II–V–I devient IIm7 – D♭7 – Imaj7. <b>Vérifier :</b> les guide-tones sont les mêmes (Si♮ et Fa). <b>Effet :</b> basse qui descend chromatiquement.<br><b>Taubman:</b> Taubman: bemols frequents - mouvements in anticipes.', why:'Moody Tritone Handbook. Outil du reharm gospel jazz sophistiqué. À intégrer progressivement dans les vamps.' },
     'RH-bVI':     { what:'Réharmonisation par ♭VI : remplacer le I par ♭VImaj7 pour créer une couleur chromatique.', how:'<b>En Do :</b> Cmaj7 → A♭maj7 (même fonction de résolution). <b>Usage :</b> sur un temps long, changer le I par ♭VI pour varier la couleur sans changer la tonalité.', why:'Hillsong, CCM contemplatif. Dericq T2 : emprunts modaux. Couleur cinématique très efficace à ICC.' },
@@ -53081,6 +53136,15 @@ var PROG={
   'FILL-TURN':    [{s:0,ct:'maj7', lbl:'I'},{s:2,ct:'m7',  lbl:'II'},{s:7,ct:'7',   lbl:'V'},{s:0,ct:'maj7',lbl:'I'}],
   'FILL-APP-CHR': [{s:1,ct:'7',    lbl:'♭II'},{s:0,ct:'maj7',lbl:'I'}],
   'FILL-LICK':    [{s:0,ct:'maj7', lbl:'I'},{s:7,ct:'7',   lbl:'V'}],
+  /* v85 — licks (la démo et la portée jouent la ligne : _rvBuildSeq → lkSkillSeq) */
+  'LICK-POS-BLUES':[{s:2,ct:'m7',lbl:'ii'},{s:7,ct:'7',lbl:'V'},{s:0,ct:'maj7',lbl:'I'}],
+  'LICK-POS-PENT': [{s:2,ct:'m7',lbl:'ii'},{s:7,ct:'7',lbl:'V'},{s:0,ct:'maj7',lbl:'I'}],
+  'LICK-POS-DOR':  [{s:2,ct:'m7',lbl:'ii'},{s:7,ct:'7',lbl:'V'},{s:0,ct:'maj7',lbl:'I'}],
+  'LICK-BERG-251': [{s:2,ct:'m7',lbl:'ii'},{s:7,ct:'7',lbl:'V'},{s:0,ct:'maj7',lbl:'I'}],
+  'LICK-GOS-DESC': [{s:0,ct:'major',lbl:'I'}],
+  'LICK-GOS-ENC':  [{s:0,ct:'major',lbl:'I'}],
+  'LICK-GOS-AMEN': [{s:5,ct:'major',lbl:'IV'},{s:0,ct:'major',lbl:'I'}],
+  'LICK-GOS-CHROM':[{s:7,ct:'7',lbl:'V'},{s:0,ct:'major',lbl:'I'}],
 
   /* CAT15 — Réharmonisation */
   'RH-SUBV7':    [{s:0,ct:'maj7',lbl:'I'},{s:1,ct:'7',   lbl:'♭II'},{s:0,ct:'maj7',lbl:'I'}],
@@ -54680,6 +54744,11 @@ window.rvSyncExpanded = function() {
         return { _noteOnly: { note: NO[m % 12], octave: Math.floor(m / 12) - 1, fn: iv === 0 ? 'tonic' : (iv === 4 ? 'mediant' : (iv === 7 ? 'dominant' : 'extension')) }, _dur: x[1] };
       });
     }
+    // v85 — licks : notes, durées et ligatures du moteur 🎷 Licks
+    if (cat === 'CAT05' && /^LICK-/.test(st.fam || '') && typeof lkSkillSeq === 'function') {
+      var sqL = lkSkillSeq(st.fam, (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C');
+      if (sqL) return sqL;
+    }
     if (cat === 'CAT05' && RUNS05[st.fam]) {
       var tr05 = (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C';
       var N05 = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'], r05 = N05.indexOf(tr05); if (r05 < 0) r05 = 0;
@@ -54888,9 +54957,10 @@ window.rvSyncExpanded = function() {
           return { m: (n.octave + 1) * 12 + pc, col: col };
         }).filter(Boolean);
         if (!notes.length) return;
-        var lb = (!p._noteOnly && p.lbl) ? String(p.lbl).split('\n')[0] : null;
+        var lb = (!p._noteOnly && p.lbl) ? String(p.lbl).split('\n')[0] : (p._stf ? p._stf.lb : null);
         // pendant la démo : l'accord à venir dans le cadre « suivant ▸ » de Garden
-        cols.push({ notes: notes, lb: lb, wf: p._noteOnly ? 0.55 : 1, _i: i, box: (step >= 0 && i === step + 1 && !p._noteOnly) ? true : undefined });
+        cols.push({ notes: notes, lb: lb, wf: p._noteOnly ? 0.55 : 1, _i: i, box: (step >= 0 && i === step + 1 && !p._noteOnly) ? true : undefined,
+                    bg: p._stf ? p._stf.bg : undefined, tup: p._stf ? p._stf.tup : undefined, bm: p._stf ? p._stf.bm : undefined, dur: p._stf ? p._stf.dur : undefined });
       });
       // Repli : familles sans entrée PROG (cadences, main gauche, voicings…) —
       // dessinées par un bloc dédié de rvFillPanel. On lit ses claviers : une
@@ -54931,9 +55001,10 @@ window.rvSyncExpanded = function() {
         el.innerHTML = ''; return;
       }
       // longue séquence : une fenêtre de 16 pas qui suit la démo
-      if (cols.length > 16) {
+      var _win = seq.some(function(p){ return p._stf; }) ? 24 : 16;   // v85 — un lick entier tient sur la portée
+      if (cols.length > _win) {
         var k = Math.max(0, cols.findIndex(function(c){ return c._i >= step; }));
-        var a = Math.min(Math.max(0, k - 4), cols.length - 16); cols = cols.slice(a, a + 16);
+        var a = Math.min(Math.max(0, k - 4), cols.length - _win); cols = cols.slice(a, a + _win);
       }
       var key = _RV_PC[tonRoot] != null ? _RV_PC[tonRoot] : 0;
       el.innerHTML = '<div style="background:#0c0f1a;border:1px solid var(--border);border-radius:8px;padding:4px 8px 2px">'
@@ -54942,7 +55013,7 @@ window.rvSyncExpanded = function() {
         + (function () {
             // v81 — ligne de notes successives (gamme, arpège, basse) : ligatures selon la figure du métronome
             const ligne = cols.length > 1 && cols.every(function (c) { return c.notes.length === 1; });
-            const F = (ligne && typeof pmHnFig === 'function') ? pmHnFig() : {};
+            const F = (ligne && typeof pmHnFig === 'function' && !cols.some(function (c) { return c.bg != null; })) ? pmHnFig() : {};
             if (F.dur) cols.forEach(function (c) { c.dur = F.dur; });
             return pmStfDraw(cols, { sp: 9, key: key, scale: 1.6, vl: cols.length > 1 && cols.some(function(c){ return c.notes.length > 1; }),
                                      beam: F.beam, beams: F.beams, tuplet: F.tuplet });
@@ -55175,6 +55246,8 @@ window.rvFillPanel=function(skillId){
     var rootIdx05=NS05.indexOf(tonRoot);
     if(rootIdx05<0){el.innerHTML='';return;}
     var intervals05=CAT05_INTERVALS[fam]||[0,2,4,7,9];
+    // v85 — licks : les notes du lick (classes de hauteur, dans l'ordre d'apparition)
+    if(/^LICK-/.test(fam)&&typeof lkSkillLick==='function'){var _lk05=lkSkillLick(fam);if(_lk05){intervals05=[];_lk05.notes.forEach(function(n){var iv=((n.m%12)+12)%12;if(intervals05.indexOf(iv)<0)intervals05.push(iv);});}}
     var fillNotes=intervals05.map(function(s,i){
       var pc=(rootIdx05+s+12)%12;
       return {note:NS05[pc],octave:4+(s<0?0:Math.floor((rootIdx05+s)/12)),
@@ -55183,7 +55256,10 @@ window.rvFillPanel=function(skillId){
     var famLabels05={
       'FILL-PENTA-R':'Run pentatonique','FILL-CHROM-R':'Run chromatique',
       'FILL-GOSPEL-2':'Fill gospel 2M','FILL-TURN':'Turn cadentiel',
-      'FILL-APP-CHR':'Approche chrom.','FILL-LICK':'Lick fin section'
+      'FILL-APP-CHR':'Approche chrom.','FILL-LICK':'Lick fin section',
+      'LICK-POS-BLUES':'Lick positions blues','LICK-POS-PENT':'Lick positions penta','LICK-POS-DOR':'Lick positions dorien',
+      'LICK-BERG-251':'Lick Bergonzi ii-V-I','LICK-GOS-DESC':'Lick gospel descente blues','LICK-GOS-ENC':'Lick gospel encerclement',
+      'LICK-GOS-AMEN':'Lick gospel amen IV-I','LICK-GOS-CHROM':'Lick gospel montée chrom.'
     };
     var cid05='rvFill_cat05';
     el.innerHTML='<div style="margin-bottom:6px">'
@@ -57371,5 +57447,35 @@ window.lkAddUser = lkAddUser; window.lkDelUser = lkDelUser; window.initModuleLic
 window.lkGenPositions = lkGenPositions; window.lkGenBergonzi = lkGenBergonzi; window.lkParse = lkParse; window.LK_GOSPEL = LK_GOSPEL;
 
 window.lkStop=lkStop;
+/* v85 — les licks comme skills (Routine › Skills, CAT05) : un lick FIXE par famille,
+   écrit en Do et transposé dans la tonalité du skill. */
+const LK_SKILLS = {
+  'LICK-POS-BLUES': function () { return lkGenPositions(0); },   // cellule blues, croches
+  'LICK-POS-PENT':  function () { return lkGenPositions(1); },   // pentatonique, triolets
+  'LICK-POS-DOR':   function () { return lkGenPositions(2); },   // dorien, croches
+  'LICK-BERG-251':  function () { return lkGenBergonzi(0); },    // groupings 1345 → 9-11-12-13 → 5679 → 1-♭2-3-5 → 1235
+  'LICK-GOS-DESC':  function () { return LK_GOSPEL[0]; },        // descente blues
+  'LICK-GOS-ENC':   function () { return LK_GOSPEL[2]; },        // encerclement de la tierce
+  'LICK-GOS-AMEN':  function () { return LK_GOSPEL[3]; },        // amen IV → I
+  'LICK-GOS-CHROM': function () { return LK_GOSPEL[6]; }         // montée chromatique de fin
+};
+function lkSkillLick(fam) { const f = LK_SKILLS[fam]; return f ? f() : null; }
+// séquence de démo / portée : notes, durées (en temps), groupes de ligature, accords
+function lkSkillSeq(fam, rootName) {
+  const L = lkSkillLick(fam); if (!L) return null;
+  let r = PM_STF_PC[rootName]; if (r == null) r = 0;
+  const sh = r > 6 ? r - 12 : r;
+  let beat = 0, bg = 0, last = null;
+  return L.notes.map(function (n) {
+    const b0 = beat; beat += n.d;
+    const tri = Math.abs(n.d - LK_T) < 1e-6, g = n.d < 1 - 1e-6 ? (tri ? 't' : 'e') + Math.floor(b0 + 1e-6) : null;
+    if (g && g !== last) bg++; last = g;
+    let lb = null; L.chords.forEach(function (c) { if (Math.abs(c.at - b0) < 1e-6) lb = c.sym; });
+    const m = n.m + sh, iv = ((n.m % 12) + 12) % 12;
+    return { _noteOnly: { note: PM_NNS[((m % 12) + 12) % 12], octave: Math.floor(m / 12) - 1, fn: iv === 0 ? 'tonic' : (iv === 4 ? 'mediant' : (iv === 7 ? 'dominant' : 'extension')) },
+             _dur: n.d, _stf: { bg: g ? bg : undefined, tup: tri ? '3' : undefined, bm: n.d <= .25 + 1e-6 ? 2 : 1, dur: n.d >= 4 ? 'w' : (n.d >= 2 ? 'h' : undefined), lb: lb ? lkTransSym(lb, sh) : null } };
+  });
+}
+window.LK_SKILLS = LK_SKILLS; window.lkSkillLick = lkSkillLick; window.lkSkillSeq = lkSkillSeq;
 </script>
 </body>
