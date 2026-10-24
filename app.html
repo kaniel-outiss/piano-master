@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v85 — MIDI Edition</title>
+    <title>Piano Master v86 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -55015,7 +55015,7 @@ window.rvSyncExpanded = function() {
             const ligne = cols.length > 1 && cols.every(function (c) { return c.notes.length === 1; });
             const F = (ligne && typeof pmHnFig === 'function' && !cols.some(function (c) { return c.bg != null; })) ? pmHnFig() : {};
             if (F.dur) cols.forEach(function (c) { c.dur = F.dur; });
-            return pmStfDraw(cols, { sp: 9, key: key, scale: 1.6, vl: cols.length > 1 && cols.some(function(c){ return c.notes.length > 1; }),
+            return pmStfDraw(cols, { sp: 9, key: key, scale: 1.6, carry: ligne, vl: cols.length > 1 && cols.some(function(c){ return c.notes.length > 1; }),
                                      beam: F.beam, beams: F.beams, tuplet: F.tuplet });
           })() + '</div>';
     } catch(e) { el.innerHTML = ''; }
@@ -55951,6 +55951,8 @@ function pmStfDraw(cols,o){
       if(!N.length)return;
       N=N.map(function(n){const sp_=n.sp||pmStfSpell(n.m,key,cRp,cIvs);let acc=sp_.acc;
         if(o.ks){const ka=ksMap[sp_.nm.charAt(0)]||'';acc=(acc===ka)?'':(acc||'♮');}
+        /* v86 — ligne mélodique sans armure (o.carry) : l'altération vaut jusqu'à la note suivante sur la même hauteur → ♮ de rappel (Mi♭ puis Mi) */
+        else if(o.carry){const M=o._carry||(o._carry={}),pv=M[sp_.step];M[sp_.step]=acc;if(!acc&&pv&&pv!=='♮')acc='♮';}
         return {n:n,step:sp_.step-b0,acc:acc,nm:sp_.nm};}).sort(function(a,b){return a.step-b.step;});
       /* lignes supplémentaires */
       const lx=sp*1.15;
@@ -57370,7 +57372,7 @@ function lkStaff(L) {
              lb: lb ? lkTransSym(lb, sh) : null, bg: g ? bg : undefined, tup: tri ? '3' : undefined, bm: n.d <= .25 + 1e-6 ? 2 : 1,
              dur: n.d >= 4 ? 'w' : (n.d >= 2 ? 'h' : undefined), wf: 0.62 };
   });
-  return pmStfDraw(cols, { sp: 9, key: key, scale: 1.35 });
+  return pmStfDraw(cols, { sp: 9, key: key, scale: 1.35, carry: true });
 }
 function lkPosCol(L, i) { const P = L.pos.filter(function (p) { return i >= p.i0 && i <= p.i1; })[0]; return P ? ['#3ECF8E', '#4F9EFF', '#C07DFF', '#F59E0B', '#FF6B9D'][L.pos.indexOf(P) % 5] : '#E8ECF5'; }
 function lkTransSym(sym, sh) {
@@ -57476,6 +57478,21 @@ function lkSkillSeq(fam, rootName) {
              _dur: n.d, _stf: { bg: g ? bg : undefined, tup: tri ? '3' : undefined, bm: n.d <= .25 + 1e-6 ? 2 : 1, dur: n.d >= 4 ? 'w' : (n.d >= 2 ? 'h' : undefined), lb: lb ? lkTransSym(lb, sh) : null } };
   });
 }
+
+/* v86 — licks relevés dans la vidéo « Piano Runs, Licks and Riffs for Jazz and Gospel » (transcription perso,
+   ramenée en Do) : ajoutés UNE fois à « Mes licks » (pm_licks_seed_v86), supprimables comme les autres. */
+(function () {
+  try {
+    if (localStorage.getItem('pm_licks_seed_v86')) return;
+    const U = lkUserList(), have = function (n) { return U.some(function (u) { return u.name === n; }); };
+    [
+      { name: 'Vidéo 1 · descente blues ♭7-6-4-5-♭3-3-1', text: 'C7 Bb4/t A4/t F4/t G4/t Eb4/t E4/t C4/2' },
+      { name: 'Vidéo 2 · cascade sur 2 octaves',          text: 'C7 Bb4/16 A4/16 F4/16 G4/16 Eb4/16 D4/16 C4/16 Bb3/16 A3/16 F3/16 G3/16 Eb3/16 E3/4 C3/2' },
+      { name: 'Vidéo 3 · run blues en cellules de 4',     text: 'C7 C#5/16 C5/16 Bb4/16 C5/16 F#4/16 G4/16 Eb4/16 C4/16 F#3/16 Eb3/16 C3/16 Bb2/16 C3/2' }
+    ].forEach(function (l) { if (!have(l.name)) U.push(l); });
+    lkUserSave(U); localStorage.setItem('pm_licks_seed_v86', '1');
+  } catch (e) {}
+})();
 window.LK_SKILLS = LK_SKILLS; window.lkSkillLick = lkSkillLick; window.lkSkillSeq = lkSkillSeq;
 </script>
 </body>
