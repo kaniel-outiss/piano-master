@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v83 — MIDI Edition</title>
+    <title>Piano Master v84 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -3669,6 +3669,10 @@ document.head.appendChild(_lockStyle);
             <div class="module-body" id="body-preacher" style="overflow-y:auto;padding:12px"></div>
         </div>
 
+        <div class="module-panel" id="module-licks">
+            <div class="module-body" id="body-licks" style="padding:0;overflow:hidden;height:100%;width:100%;max-width:1000px;box-sizing:border-box"></div>
+        </div>
+
         <div class="module-panel" id="module-fillin">
             <div class="module-body" id="body-fillin" style="overflow-y:auto;padding:12px"></div>
         </div>
@@ -4052,7 +4056,7 @@ function closeDrawer() {
 }
 
 /* ===== NAVIGATION MODULES ===== */
-const MODULES = ['inversions','construction','gammes','degrees','iivi','prog','vamp','turn','minijeux','harmonie','mod','trans','compar','atelier','predication','poly','metro','midilab','guide','suivi','routine','vampcoach','preacher','fillin','runner','resolutions','vampchords','gracenotes','grillebook','boucle'];
+const MODULES = ['inversions','construction','gammes','degrees','iivi','prog','vamp','turn','minijeux','harmonie','mod','trans','compar','atelier','predication','poly','metro','midilab','guide','suivi','routine','vampcoach','preacher','fillin','runner','resolutions','vampchords','gracenotes','grillebook','boucle','licks'];
 let currentModuleIndex = 0;
 
 function switchModule(name) {
@@ -4187,6 +4191,11 @@ function switchModule(name) {
             if (typeof initModuleVampCoach === 'function') initModuleVampCoach();
         }));
     }
+    if (name === 'licks') {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (typeof initModuleLicks === 'function') initModuleLicks();
+        }));
+    } else if (typeof lkStop === 'function' && typeof LK !== 'undefined' && LK.t) lkStop();
     if (name === 'preacher') {
         requestAnimationFrame(() => requestAnimationFrame(() => {
             if (typeof initModulePreacher === 'function') initModulePreacher();
@@ -4323,6 +4332,7 @@ const _hgDef = {
             {id:'preacher',  icon:'✊',  label:'Preacher',           tab:null,       cat:'Accompagnement'},
             {id:'fillin',    icon:'🎤',  label:'Fill-in',            tab:null,       cat:'Accompagnement'},
             {id:'runner',    icon:'🏃',  label:'Runs',               tab:null,       cat:'Accompagnement'},
+            {id:'licks',     icon:'🎷',  label:'Licks',              tab:null,       cat:'Accompagnement'},
             {id:'boucle',    icon:'🔁',  label:'Boucle 12 tons',     tab:null,       cat:'Accompagnement'},
         ]
     },
@@ -27164,7 +27174,7 @@ function _suiviRender() {
         const h = Math.max(x.n > 0 ? 1.5 : 0.8, (x.n / max) * (H - 2));
         svg += '<rect x="' + (i * (bw + gap)).toFixed(1) + '" y="' + (H - h).toFixed(1)
             + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="' + (bw > 4 ? 1.2 : 0.4) + '" fill="'
-            + coulJour(x.n) + '"><title>' + x.d + ' : ' + x.n + ' reps</title></rect>';
+            + coulJour(x.n) + '"><title>Piano Master v84 — MIDI Edition</title></rect>';
       });
       svg += '</svg>';
       // La légende : sans elle, quatre couleurs ne se devinent pas.
@@ -55907,13 +55917,17 @@ function pmStfDraw(cols,o){
   });
   /* v80 — ligatures : o.beam = notes par groupe (2 croches, 4 doubles, 3 triolets),
      o.beams = 1 ou 2 barres ; hampes prolongées jusqu'à la barre (plate, au plus haut du groupe) */
-  if(o.beam>1)Object.keys(STEMS).forEach(function(si){
-    const G={};STEMS[si].forEach(function(t){const g=Math.floor(t.ci/o.beam);(G[g]=G[g]||[]).push(t);});
+  /* v84 — groupes libres : cols[i].bg = n° de groupe (croches et triolets mêlés dans une phrase),
+     cols[i].tup = '3' sur le groupe, cols[i].bm = nombre de barres */
+  const _freeBg=cols.some(function(c){return c.bg!=null;});
+  if(o.beam>1||_freeBg)Object.keys(STEMS).forEach(function(si){
+    const G={};STEMS[si].forEach(function(t){const c=cols[t.ci];const g=_freeBg?(c.bg!=null?'b'+c.bg:'n'+t.ci):Math.floor(t.ci/o.beam);(G[g]=G[g]||[]).push(t);});
     Object.keys(G).forEach(function(g){const T=G[g];if(T.length<2)return;
+      const c0=cols[T[0].ci],_bms=(c0&&c0.bm)||o.beams||1,_tup=(c0&&c0.tup)||o.tuplet;
       const yb=Math.min.apply(null,T.map(function(t){return t.y;})),x1=T[0].x,x2=T[T.length-1].x,th=sp*.45;
       T.forEach(function(t){if(t.y>yb)out+='<line x1="'+t.x+'" x2="'+t.x+'" y1="'+t.y+'" y2="'+yb+'" stroke="#E8ECF5" stroke-width="'+(sp*.11)+'"/>';});
-      for(let b=0;b<(o.beams||1);b++){const y=yb+b*sp*.8;out+='<rect x="'+(x1-sp*.05)+'" y="'+y+'" width="'+(x2-x1+sp*.1)+'" height="'+th+'" fill="#E8ECF5"/>';}
-      if(o.tuplet)out+='<text x="'+((x1+x2)/2)+'" y="'+(yb-sp*.4)+'" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="'+(sp*1.1)+'" fill="#B8C0DA">'+o.tuplet+'</text>';});
+      for(let b=0;b<_bms;b++){const y=yb+b*sp*.8;out+='<rect x="'+(x1-sp*.05)+'" y="'+y+'" width="'+(x2-x1+sp*.1)+'" height="'+th+'" fill="#E8ECF5"/>';}
+      if(_tup)out+='<text x="'+((x1+x2)/2)+'" y="'+(yb-sp*.4)+'" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="'+(sp*1.1)+'" fill="#B8C0DA">'+_tup+'</text>';});
   });
   if(o.vl&&cols.length>1)out+=pmStfVL(HD,cols,sp,o);
   if(o.lb)out+='<text x="'+x0+'" y="'+(sp*1.1)+'" font-family="Inter,Arial" font-weight="700" font-size="'+(sp*1.05)+'" fill="#7A85A8">'+o.lb+'</text>';
@@ -56139,7 +56153,7 @@ function pmStfCompanion(id, notes, handsData) {
   if (!pmStfOn() || typeof pmStfDraw !== 'function') return;
   const el = document.getElementById(id);
   if (!el || _pmStfExclu(id, el)) return;
-  if (id === 'atel-keys') return;
+  if (id === 'atel-keys' || id === 'lk-keys') return;
   const L = (handsData && handsData.leftHand) || [], R = (handsData && handsData.rightHand) || [];
   const seen = {}, ns = [];
   (notes || []).forEach(function (n) {
@@ -57094,5 +57108,268 @@ window.at2Set = at2Set; window.at2Show = at2Show; window.at2Play = at2Play; wind
 
 
 
+
+
+/* ════════════════════════════════════════════════════════════════════════
+   🎷 v84 — LICKS (Practice › Licks)
+   Quatre sources :
+   · Positions : principe « une cellule de 4 notes posée sur chaque accord du
+     ii–V–I » (ex. La-Do-Ré-Mi♭ puis la même forme sur Mi-Sol-La-Si♭), ordres
+     et rythmes variés, résolution sur la tierce. Licks ORIGINAUX générés.
+   · Bergonzi : système encodé dans le skill (groupings 1345 / 9-11-12-13 sur ii,
+     5679 et 1-♭2-3-5 sur V, 1235 vers I ; permutations recommandées 1235 / 2153 /
+     3521 / 5321), enchaîné au plus près. Formules, aucun exemple recopié.
+   · Gospel : idiomes gospel écrits à la main (originaux).
+   · Mes licks : saisie texte, gardés sur l'appareil (pm_licks_user).
+   Tout est écrit en Do et transposé dans la tonalité de la barre latérale.
+   Clavier : la note jouée s'allume ; positions affichées au-dessus, note en cours
+   en surbrillance ; portée : croches et triolets liés (groupes libres).
+   ════════════════════════════════════════════════════════════════════════ */
+const LK_T = 1 / 3;
+const LK_II_V_I = [{ sym: 'Dm7', r: 2, at: 0 }, { sym: 'G7', r: 7, at: 4 }, { sym: 'Cmaj7', r: 0, at: 8 }];
+// ── Positions ──────────────────────────────────────────────────────────
+const LK_CELLS = {
+  blues: { lb: 'blues (La-Do-Ré-Mi♭)', sh: [0, 3, 5, 6], ii: 7, V: 9 },   // ii : sur la 5te (La) · V : sur la 13e (Mi)
+  pent:  { lb: 'pentatonique',          sh: [0, 2, 4, 7], ii: 3, V: 5 },   // ii : Fa pentatonique · V : Do penta (sus)
+  dor:   { lb: 'dorien (1-2-♭3-4)',     sh: [0, 2, 3, 5], ii: 0, V: 7 }    // ii : Ré-Mi-Fa-Sol · V : 5-6-♭7-8
+};
+const LK_ORD = [[0,1,2,3,3,2,1,0],[0,1,2,3,2,1,0,1],[3,2,1,0,0,1,2,3],[0,2,1,3,2,0,3,1],[1,0,2,3,3,1,2,0],[0,1,3,2,1,0,3,2]];
+const LK_RHY = { r8: [.5,.5,.5,.5,.5,.5,.5,.5], rt: [LK_T,LK_T,LK_T,.5,.5,.5,.5,1] };
+function lkNear(prev, pc, lo, hi) { // la note de classe pc la plus proche de prev, dans [lo, hi]
+  let best = null; for (let m = lo; m <= hi; m++) if (((m % 12) + 12) % 12 === ((pc % 12) + 12) % 12 && (best == null || Math.abs(m - prev) < Math.abs(best - prev))) best = m;
+  return best;
+}
+function lkPlaceGroup(offs, root, prev) { // place un groupe (demi-tons relatifs à la fondamentale) au plus près
+  const first = lkNear(prev, root + offs[0], 57, 84), base = first - offs[0];
+  return offs.map(function (o) { return base + o; });
+}
+function lkGenPositions(seed) {
+  const keys = Object.keys(LK_CELLS), C = LK_CELLS[keys[seed % keys.length]];
+  const o1 = LK_ORD[(seed * 5 + 1) % LK_ORD.length], o2 = LK_ORD[(seed * 3 + 2) % LK_ORD.length];
+  const rh = (seed % 2) ? LK_RHY.rt : LK_RHY.r8;
+  const ii = lkPlaceGroup(C.sh.map(function (x) { return x + C.ii; }), 2, 69);
+  const V = lkPlaceGroup(C.sh.map(function (x) { return x + C.V; }), 7, ii[o1[7]]);
+  const notes = [];
+  o1.forEach(function (k, i) { notes.push({ m: ii[k], d: rh[i] }); });
+  o2.forEach(function (k, i) { notes.push({ m: V[k], d: rh[i] }); });
+  notes.push({ m: lkNear(notes[notes.length - 1].m, 4, 60, 81), d: 4 });   // résolution sur la tierce de Cmaj7
+  return { name: 'Positions ' + C.lb + ' · n°' + (seed + 1), src: 'pos', chords: LK_II_V_I, notes: notes,
+           pos: [{ lb: 'Position 1', i0: 0, i1: 7, cell: ii }, { lb: 'Position 2', i0: 8, i1: 15, cell: V }],
+           info: 'cellule ' + C.lb + ' sur Dm7 puis sur G7 · résout sur la 3ce' };
+}
+// ── Bergonzi (formules du skill) ───────────────────────────────────────
+const LK_BDEG = { min: { 1: 0, 3: 3, 4: 5, 5: 7, 9: 14, 11: 17, 12: 19, 13: 21 }, dom: { 5: 7, 6: 9, 7: 10, 9: 14 }, maj: { 1: 0, 2: 2, 3: 4, 5: 7 }, d7b9: { 1: 0, 2: 1, 3: 4, 5: 7 } };
+const LK_BPERM = [[0,1,2,3],[1,0,3,2],[2,3,1,0],[3,2,1,0]];   // 1235 · 2153 · 3521 · 5321 (et 1345 · 3154 · 4531 · 5431 en mineur)
+const LK_BPERM_LB = ['1235', '2153', '3521', '5321'];
+function lkGenBergonzi(seed) {
+  const pA = LK_BPERM[seed % 4], pB = LK_BPERM[(seed + 1) % 4], pC = LK_BPERM[(seed + 2) % 4], pD = LK_BPERM[(seed + 3) % 4], pE = LK_BPERM[(seed * 3) % 4];
+  const grp = function (qual, degs, perm) { const st = degs.map(function (d) { return LK_BDEG[qual][d]; }); return perm.map(function (k) { return st[k]; }); };
+  const G = [
+    [grp('min', [1, 3, 4, 5], pA), 2], [grp('min', [9, 11, 12, 13], pB), 2],
+    [grp('dom', [5, 6, 7, 9], pC), 7], [grp('d7b9', [1, 2, 3, 5], pD), 7],
+    [grp('maj', [1, 2, 3, 5], pE), 0]
+  ];
+  const notes = []; let prev = 65;
+  G.forEach(function (g) { lkPlaceGroup(g[0], g[1], prev).forEach(function (m) { notes.push({ m: m, d: .5 }); prev = m; }); });
+  notes.push({ m: lkNear(prev, 4, 60, 81), d: 2 });
+  return { name: 'Bergonzi · ' + LK_BPERM_LB[seed % 4] + '/' + LK_BPERM_LB[(seed + 2) % 4] + ' · n°' + (seed + 1), src: 'berg', chords: LK_II_V_I, notes: notes,
+           pos: [{ lb: 'ii · 1345', i0: 0, i1: 3 }, { lb: 'ii · 9-11-12-13', i0: 4, i1: 7 }, { lb: 'V · 5679', i0: 8, i1: 11 }, { lb: 'V · 1-♭2-3-5', i0: 12, i1: 15 }, { lb: 'I · 1235', i0: 16, i1: 19 }],
+           info: 'groupings Bergonzi enchaînés au plus près · perms ' + [pA, pB, pC, pD].map(function (p) { return LK_BPERM_LB[LK_BPERM.indexOf(p)]; }).join(' ') };
+}
+// ── Gospel (originaux, écrits en Do) ───────────────────────────────────
+const LK_I = [{ sym: 'C', r: 0, at: 0 }], LK_IV_I = [{ sym: 'F', r: 5, at: 0 }, { sym: 'C', r: 0, at: 2 }], LK_V_I = [{ sym: 'G7', r: 7, at: 0 }, { sym: 'C', r: 0, at: 3 }];
+const LK_GOSPEL = [
+  { name: 'Descente blues', chords: LK_I, n: [[81,.5],[79,.5],[75,LK_T],[76,LK_T],[74,LK_T],[72,1.5]], info: '6-5-♭3→3-2-1 : la blue note qui glisse sur la tierce' },
+  { name: 'Balayage pentatonique', chords: LK_I, n: [[60,.5],[62,.5],[64,.5],[67,.5],[69,.5],[72,.5],[74,.5],[76,.5],[79,2]], info: 'pentatonique majeure en montée, arrivée sur la 5te' },
+  { name: 'Encerclement de la tierce', chords: LK_I, n: [[65,.5],[63,.5],[64,1],[67,.5],[69,.5],[72,1]], info: '4 et ♭3 encerclent la 3ce' },
+  { name: 'Amen IV → I', chords: LK_IV_I, n: [[69,.5],[67,.5],[65,.5],[64,.5],[62,.5],[60,1.5]], info: 'descente 6-5-4-3 sur IV, résolution sur I' },
+  { name: 'Blue note glissée', chords: LK_I, n: [[79,.5],[75,.25],[76,.75],[72,.5],[69,.5],[72,2]], info: '♭3→3 en appoggiature, retour sur la tonique' },
+  { name: 'Triolets tournants', chords: LK_I, n: [[76,LK_T],[74,LK_T],[72,LK_T],[74,LK_T],[76,LK_T],[79,LK_T],[84,2]], info: 'tour 3-2-1-2-3-5 en triolets' },
+  { name: 'Montée chromatique de fin', chords: LK_V_I, n: [[67,.5],[68,.5],[69,.5],[70,.5],[71,1],[72,3]], info: '5→♭6→6→♭7→7→8 : la fin de section qui monte' },
+  { name: 'Mineur blues gospel', chords: LK_I, n: [[84,.5],[82,.5],[79,.5],[77,.5],[75,.5],[72,2]], info: '8-♭7-5-4-♭3-1 : la couleur blues sur le majeur' }
+].map(function (g) { return { name: g.name, src: 'gospel', chords: g.chords, notes: g.n.map(function (x) { return { m: x[0], d: x[1] }; }), info: g.info }; });
+// ── Mes licks : saisie texte ───────────────────────────────────────────
+// Syntaxe : notes « D4/8 F#4/8 A4/t … » (durée : 1 ronde, 2 blanche, 4 noire, 8 croche, 16 double, t triolet de croches)
+// accords : un mot sans « / » (Dm7, G7, Cmaj7…) placé avant ses notes. Écrit en Do.
+function lkParse(txt) {
+  const DUR = { '1': 4, '2': 2, '4': 1, '8': .5, '16': .25, 't': LK_T }, PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const notes = [], chords = []; let beat = 0, err = null;
+  String(txt || '').split(/[\s|,]+/).filter(Boolean).forEach(function (tk) {
+    const m = /^([A-Ga-g])(#|b|♯|♭)?(\d)\/(16|1|2|4|8|t)$/.exec(tk);
+    if (m) {
+      const pc = PC[m[1].toUpperCase()] + (m[2] === '#' || m[2] === '♯' ? 1 : (m[2] === 'b' || m[2] === '♭' ? -1 : 0));
+      notes.push({ m: (parseInt(m[3]) + 1) * 12 + pc, d: DUR[m[4]] }); beat += DUR[m[4]];
+    } else if (/^[A-G][#b♯♭]?[a-zA-Z0-9°ø+#b♭♯()]*$/.test(tk)) {
+      const rp = PC[tk[0]] + (/^.[#♯]/.test(tk) ? 1 : (/^.[b♭]/.test(tk) ? -1 : 0));
+      chords.push({ sym: tk, r: (rp + 12) % 12, at: beat });
+    } else if (!err) err = tk;
+  });
+  return { notes: notes, chords: chords, err: err };
+}
+function lkUserList() { try { return JSON.parse(localStorage.getItem('pm_licks_user') || '[]'); } catch (e) { return []; } }
+function lkUserSave(L) { try { localStorage.setItem('pm_licks_user', JSON.stringify(L)); } catch (e) {} }
+// ── État ───────────────────────────────────────────────────────────────
+const LK = (function () {
+  const d = { src: 'pos', idx: 0, seed: 0, bpm: 80, swing: true, acc: true, ramp: false, ctrl: false };
+  try { const v = JSON.parse(localStorage.getItem('pm_licks_v1') || 'null'); if (v) Object.keys(d).forEach(function (k) { if (v[k] != null) d[k] = v[k]; }); } catch (e) {}
+  d.cur = -1; d.t = null; d.ptr = 0; d.bad = -1; d.edit = false; return d;
+})();
+function lkSave() { try { const o = {}; ['src', 'idx', 'seed', 'bpm', 'swing', 'acc', 'ramp', 'ctrl'].forEach(function (k) { o[k] = LK[k]; }); localStorage.setItem('pm_licks_v1', JSON.stringify(o)); } catch (e) {} }
+function lkList() {
+  if (LK.src === 'pos') return [0, 1, 2, 3, 4, 5].map(function (i) { return lkGenPositions(LK.seed + i); });
+  if (LK.src === 'berg') return [0, 1, 2, 3].map(function (i) { return lkGenBergonzi(LK.seed + i); });
+  if (LK.src === 'gospel') return LK_GOSPEL;
+  return lkUserList().map(function (u) { const P = lkParse(u.text); return { name: u.name, src: 'user', chords: P.chords, notes: P.notes, info: 'mon lick' }; });
+}
+function lkKey() { try { if (typeof selectedRoot !== 'undefined' && PM_STF_PC[selectedRoot] != null) return PM_STF_PC[selectedRoot]; } catch (e) {} return 0; }
+function lkShift() { const k = lkKey(); return k > 6 ? k - 12 : k; }
+function lkCur() { const L = lkList(); if (!L.length) return null; LK.idx = Math.max(0, Math.min(LK.idx, L.length - 1)); return L[LK.idx]; }
+// ── Lecture ────────────────────────────────────────────────────────────
+function lkStop() { if (LK.t) clearTimeout(LK.t); LK.t = null; LK.cur = -1; lkDraw(); }
+function lkChordNotes(ch, sh) { // main gauche : fondamentale + 3ce + 7e (shell), registre grave
+  const q = /maj/.test(ch.sym) ? [0, 4, 11] : (/m7b5|ø/.test(ch.sym) ? [0, 3, 10] : (/^[A-G][#b♯♭]?m/.test(ch.sym) ? [0, 3, 10] : (/7|9|13/.test(ch.sym) ? [0, 4, 10] : [0, 4, 7])));
+  const r = 36 + (((ch.r + sh) % 12) + 12) % 12 + (((ch.r + sh) % 12 + 12) % 12 < 5 ? 12 : 0);
+  return q.map(function (x) { return r + x; });
+}
+function lkPlay() {
+  if (LK.t) { lkStop(); return; }
+  const L = lkCur(); if (!L || !L.notes.length) return;
+  try { if (typeof initAudio === 'function') initAudio(); } catch (e) {}
+  const sh = lkShift(); let i = 0, beat = 0;
+  const step = function () {
+    if (!document.getElementById('lk-keys')) { LK.t = null; return; }
+    if (i >= L.notes.length) {           // boucle (+2 BPM si la montée est active)
+      if (LK.ramp) { LK.bpm = Math.min(220, LK.bpm + 2); lkSave(); }
+      i = 0; beat = 0;
+    }
+    const n = L.notes[i];
+    if (LK.acc) L.chords.forEach(function (c) { if (Math.abs(c.at - beat) < 1e-6) lkChordNotes(c, sh).forEach(function (m) { try { playNote(PM_NNS[m % 12], Math.floor(m / 12) - 1, 1.6); } catch (e) {} }); });
+    try { playNote(PM_NNS[(n.m + sh) % 12], Math.floor((n.m + sh) / 12) - 1, Math.min(1.2, n.d * 60 / LK.bpm + .1)); } catch (e) {}
+    LK.cur = i; lkShow(i);
+    let d = n.d;
+    if (LK.swing && Math.abs(n.d - .5) < 1e-6) { const onBeat = Math.abs(beat - Math.round(beat)) < 1e-6; d = onBeat ? 2 / 3 : 1 / 3; }
+    beat += n.d; i++;
+    LK.t = setTimeout(step, Math.max(40, Math.round(d * 60000 / LK.bpm)));
+  };
+  step();
+}
+// clavier : la note courante (et la main gauche de l'accord en cours)
+function lkShow(i) {
+  const L = lkCur(); if (!L) return;
+  const sh = lkShift(), n = L.notes[i];
+  if (!n) { lkDraw(); return; }
+  let beat = 0; for (let k = 0; k < i; k++) beat += L.notes[k].d;
+  let ch = null; L.chords.forEach(function (c) { if (c.at <= beat + 1e-6) ch = c; });
+  const md = [{ note: PM_NNS[(n.m + sh) % 12], octave: Math.floor((n.m + sh) / 12) - 1, fn: 'tonic' }];
+  const lh = (LK.acc && ch) ? lkChordNotes(ch, sh).map(function (m) { return { note: PM_NNS[m % 12], octave: Math.floor(m / 12) - 1, fn: 'seventh' }; }) : [];
+  if (typeof clearKeyboard === 'function') clearKeyboard('lk-keys');
+  displayNotesOnKeyboard('lk-keys', lh.concat(md), true, lh.length ? { leftHand: lh, rightHand: md } : null);
+  lkDraw();
+}
+// contrôle MIDI (optionnel) : la note suivante est attendue ; classe de hauteur
+document.addEventListener('midiNoteOn', function (e) {
+  const m = e && e.detail && e.detail.midi;
+  if (typeof m !== 'number' || !LK.ctrl || !document.getElementById('lk-keys')) return;
+  const L = lkCur(); if (!L || !L.notes.length) return;
+  const exp = (L.notes[LK.ptr].m + lkShift()) % 12;
+  if (m % 12 === ((exp + 12) % 12)) { LK.bad = -1; LK.ptr = (LK.ptr + 1) % L.notes.length; } else LK.bad = LK.ptr;
+  lkShow(LK.ptr);
+});
+// ── Rendu ──────────────────────────────────────────────────────────────
+function lkPill(on, js, t, col) {
+  return '<button onclick="' + js + '" style="padding:3px 9px;font-size:10.5px;font-weight:700;border-radius:6px;cursor:pointer;font-family:var(--font-mono);border:1px solid ' + (on ? (col || 'var(--accent)') : 'var(--border)') + ';background:' + (on ? 'rgba(99,102,241,.18)' : 'transparent') + ';color:' + (on ? (col || 'var(--accent)') : 'var(--text-muted)') + '">' + t + '</button>';
+}
+function lkSet(k, v) { if (LK.t) lkStop(); LK[k] = v; if (k === 'src') { LK.idx = 0; } LK.ptr = 0; LK.bad = -1; lkSave(); lkRender(); }
+function lkStaff(L) {
+  const sh = lkShift(), key = lkKey();
+  let beat = 0, bg = 0, lastGrp = null;
+  const cols = L.notes.map(function (n, i) {
+    const b0 = beat; beat += n.d;
+    const tri = Math.abs(n.d - LK_T) < 1e-6, short = n.d < 1 - 1e-6;
+    const g = short ? (tri ? 't' : 'e') + Math.floor(b0 + 1e-6) : null;
+    if (g && g !== lastGrp) bg++; lastGrp = g;
+    let lb = null; L.chords.forEach(function (c) { if (Math.abs(c.at - b0) < 1e-6) lb = c.sym; });
+    const on = i === (LK.ctrl ? LK.ptr : LK.cur), bad = LK.ctrl && i === LK.bad;
+    return { notes: [{ m: n.m + sh, col: bad ? '#EF4444' : (on ? '#F5C842' : (L.pos ? lkPosCol(L, i) : '#E8ECF5')) }],
+             lb: lb ? lkTransSym(lb, sh) : null, bg: g ? bg : undefined, tup: tri ? '3' : undefined, bm: n.d <= .25 + 1e-6 ? 2 : 1,
+             dur: n.d >= 4 ? 'w' : (n.d >= 2 ? 'h' : undefined), wf: 0.62 };
+  });
+  return pmStfDraw(cols, { sp: 9, key: key, scale: 1.35 });
+}
+function lkPosCol(L, i) { const P = L.pos.filter(function (p) { return i >= p.i0 && i <= p.i1; })[0]; return P ? ['#3ECF8E', '#4F9EFF', '#C07DFF', '#F59E0B', '#FF6B9D'][L.pos.indexOf(P) % 5] : '#E8ECF5'; }
+function lkTransSym(sym, sh) {
+  const m = /^([A-G])([#b♯♭]?)(.*)$/.exec(sym); if (!m || !sh) return sym;
+  const PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }, pc = (PC[m[1]] + (m[2] === '#' || m[2] === '♯' ? 1 : (m[2] ? -1 : 0)) + sh + 24) % 12;
+  const FL = [0, 5, 10, 3, 8, 1].indexOf(lkKey()) >= 0;
+  return (FL ? ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'] : ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'])[pc] + m[3];
+}
+function lkPosRow(L) {
+  if (!L.pos) return '';
+  const sh = lkShift(), key = lkKey(), at = LK.ctrl ? LK.ptr : LK.cur;
+  return '<div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:2px 0">' + L.pos.map(function (p, k) {
+    const idx = []; for (let i = p.i0; i <= p.i1; i++) idx.push(i);
+    const cell = p.cell ? p.cell.slice().sort(function (a, b) { return a - b; }) : idx.map(function (i) { return L.notes[i].m; }).filter(function (m, j, a) { return a.indexOf(m) === j; });
+    const curM = (at >= p.i0 && at <= p.i1) ? L.notes[at].m : null;
+    const col = ['#3ECF8E', '#4F9EFF', '#C07DFF', '#F59E0B', '#FF6B9D'][k % 5];
+    return '<div style="text-align:center"><div style="font-size:10px;font-weight:900;letter-spacing:.06em;color:' + col + '">' + p.lb.toUpperCase() + '</div>'
+      + '<div style="font-size:17px;font-weight:900;font-family:Inter,Arial;letter-spacing:.04em">' + cell.map(function (m) {
+          const nm = pmStfSpell(m + sh, key).nm, on = curM != null && m === curM;
+          return '<span style="color:' + (on ? '#F5C842' : 'rgba(232,236,245,.7)') + ';font-size:' + (on ? '22px' : '17px') + ';margin:0 3px">' + nm + '</span>';
+        }).join('') + '</div></div>';
+  }).join('') + '</div>';
+}
+function lkRender() {
+  const body = document.getElementById('body-licks'); if (!body) return;
+  const L = lkCur(), Ls = lkList();
+  const src = [['pos', '🧩 Positions'], ['berg', '📐 Bergonzi'], ['gospel', '✝️ Gospel'], ['user', '✍️ Mes licks']];
+  body.innerHTML =
+    '<div style="display:flex;flex-direction:column;height:100%;padding:10px 14px;gap:6px;box-sizing:border-box;overflow:hidden">'
+    + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+    + '<span style="font-size:13px;font-weight:800;color:var(--text)">🎷 Licks</span>'
+    + '<span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">écrits en Do · joués en <b style="color:var(--accent)">' + lkTransSym('C', lkShift()) + '</b> (barre latérale)</span>'
+    + '<span style="flex:1"></span>' + src.map(function (x) { return lkPill(LK.src === x[0], "lkSet('src','" + x[0] + "')", x[1]); }).join('') + '</div>'
+    + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'
+    + (Ls.length ? '<select onchange="lkSet(\'idx\',+this.value)" style="max-width:340px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:11px">'
+        + Ls.map(function (l, i) { return '<option value="' + i + '"' + (i === LK.idx ? ' selected' : '') + '>' + l.name + '</option>'; }).join('') + '</select>' : '<span style="font-size:11px;color:var(--text-dim)">Aucun lick — ajoute le tien ↓</span>')
+    + ((LK.src === 'pos' || LK.src === 'berg') ? lkPill(false, "lkSet('seed'," + (LK.seed + 7) + ")", '🎲 Nouveaux') : '')
+    + (LK.src === 'user' ? lkPill(LK.edit, 'LK.edit=!LK.edit;lkRender()', '＋ Ajouter') : '')
+    + '<span style="width:1px;height:18px;background:var(--border);margin:0 3px"></span>'
+    + lkPill(!!LK.t, 'lkPlay()', LK.t ? '■ Stop' : '▶ Jouer', '#3ECF8E')
+    + '<span style="font-size:9px;color:var(--text-dim);font-family:var(--font-mono)">♩=</span><input type="range" min="40" max="220" value="' + LK.bpm + '" oninput="LK.bpm=+this.value;this.nextSibling.textContent=this.value;lkSave()" style="width:80px;accent-color:var(--accent)"><span style="font-size:9px;font-family:var(--font-mono);color:var(--accent);min-width:22px">' + LK.bpm + '</span>'
+    + lkPill(LK.swing, "lkSet('swing'," + !LK.swing + ")", 'swing') + lkPill(LK.acc, "lkSet('acc'," + !LK.acc + ")", 'MG') + lkPill(LK.ramp, "lkSet('ramp'," + !LK.ramp + ")", '+2 BPM/boucle') + lkPill(LK.ctrl, "lkSet('ctrl'," + !LK.ctrl + ")", '🎯 MIDI')
+    + '</div>'
+    + (LK.edit ? '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input id="lk-ed-name" placeholder="Nom du lick" style="width:150px;padding:4px 6px;border-radius:5px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:11px">'
+        + '<input id="lk-ed-txt" placeholder="Dm7 D4/8 F4/8 A4/8 C5/8 G7 B4/t D5/t F5/t … (écrit en Do)" style="flex:1;min-width:240px;padding:4px 6px;border-radius:5px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:11px;font-family:var(--font-mono)">'
+        + lkPill(false, 'lkAddUser()', '✓ Enregistrer', '#3ECF8E') + '<span id="lk-ed-err" style="font-size:10px;color:#ff4d6d"></span></div>' : '')
+    + (L ? '<div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono)">' + (L.info || '') + (LK.src === 'user' && Ls.length ? ' · <a href="#" onclick="lkDelUser();return false" style="color:#ff4d6d">supprimer</a>' : '') + '</div>' : '')
+    + '<div id="lk-pos"></div>'
+    + '<div id="lk-shell" style="background:var(--piano-bg);border-radius:12px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.5)"><div style="overflow-x:auto"><div class="piano-keys" id="lk-keys"></div></div></div>'
+    + '<div id="lk-staff" style="flex:1;min-height:0"></div>'
+    + '</div>';
+  buildKeyboard('lk-keys', null, 'C', 2, 4);
+  lkDraw();
+}
+function lkDraw() {
+  const L = lkCur(), ps = document.getElementById('lk-pos'), st = document.getElementById('lk-staff');
+  if (!ps || !st) return;
+  if (!L || !L.notes.length) { ps.innerHTML = ''; st.innerHTML = ''; return; }
+  ps.innerHTML = lkPosRow(L);
+  st.innerHTML = lkStaff(L);
+}
+function lkAddUser() {
+  const nm = (document.getElementById('lk-ed-name') || {}).value || 'Mon lick', tx = (document.getElementById('lk-ed-txt') || {}).value || '';
+  const P = lkParse(tx), er = document.getElementById('lk-ed-err');
+  if (P.err || !P.notes.length) { if (er) er.textContent = P.err ? 'je ne comprends pas « ' + P.err + ' »' : 'aucune note'; return; }
+  const U = lkUserList(); U.push({ name: nm, text: tx }); lkUserSave(U);
+  LK.edit = false; LK.idx = U.length - 1; lkSave(); lkRender();
+}
+function lkDelUser() { const U = lkUserList(); U.splice(LK.idx, 1); lkUserSave(U); LK.idx = 0; lkSave(); lkRender(); }
+function initModuleLicks() { lkRender(); }
+document.addEventListener('rootChange', function () { if (document.getElementById('lk-keys') && document.getElementById('module-licks') && document.getElementById('module-licks').offsetParent !== null) { lkStop(); lkRender(); } });
+window.LK = LK; window.lkSet = lkSet; window.lkPlay = lkPlay; window.lkRender = lkRender; window.lkSave = lkSave;
+window.lkAddUser = lkAddUser; window.lkDelUser = lkDelUser; window.initModuleLicks = initModuleLicks;
+window.lkGenPositions = lkGenPositions; window.lkGenBergonzi = lkGenBergonzi; window.lkParse = lkParse; window.LK_GOSPEL = LK_GOSPEL;
+
+window.lkStop=lkStop;
 </script>
 </body>
