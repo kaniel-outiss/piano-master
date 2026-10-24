@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v82 — MIDI Edition</title>
+    <title>Piano Master v83 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -54639,7 +54639,9 @@ window.rvSyncExpanded = function() {
     }
     highlightStep(_demoStep);
     _demoStep++;
-    _demoTimer = setTimeout(runStep, getMsPerStep());
+    // v83 — durée propre au pas (ornements : petites notes rapides, note d'arrivée tenue)
+    var _pd = (_demoSeq[_demoStep - 1] || {})._dur || 1;
+    _demoTimer = setTimeout(runStep, Math.max(60, Math.round(getMsPerStep() * _pd)));
   }
 
   // v71 — la séquence de la démo, sans effet de bord : rvDemoPlay ET la portée
@@ -54650,6 +54652,24 @@ window.rvSyncExpanded = function() {
     var RUNS05 = { 'FILL-PENTA-R': [0,2,4,7,9,12,9,7,4,2,0],   // DESC : Do–Ré–Mi–Sol–La–Do, montée puis retour
                    'FILL-CHROM-R': [-3,-2,-1,0],                // DESC : La–Si♭–Si → Do (approche par le bas)
                    'FILL-LICK':    [0,2,4,7,9,11,12] };         // lick hexatonique qui résout sur la tonique
+    // v83 — ornements (CAT16) : notes successives avec leurs durées, d'après les consignes (DESC)
+    if (cat === 'CAT16' && /^ORN-/.test(st.fam || '')) {
+      var trO = (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C';
+      var NO = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'], rO = NO.indexOf(trO); if (rO < 0) rO = 0;
+      var r4 = 60 + rO, WHITE = [0,2,4,5,7,9,11];
+      var whites = function (a, b) { var o = []; for (var m = Math.min(a, b); m <= Math.max(a, b); m++) if (WHITE.indexOf(m % 12) >= 0 || m === a || m === b) o.push(m); return a <= b ? o : o.reverse(); };
+      var ORN = {
+        'ORN-TRILLE':  [0,2,0,2,0,2,0,2].map(function (x) { return [r4 + x, 0.25]; }).concat([[r4, 2]]),      // Do–Ré… en notes rapides, fin sur Do
+        'ORN-MORDANT': [[r4, 0.2], [r4 + 2, 0.2], [r4, 1.6]],                                                   // Do–Ré–Do en une double-croche
+        'ORN-GLISS-M': whites(r4, r4 + 12).map(function (m, i, a) { return [m, i === a.length - 1 ? 2 : 0.12]; }), // touches blanches → arrivée
+        'ORN-GLISS-D': whites(r4 + 12, r4).map(function (m, i, a) { return [m, i === a.length - 1 ? 2 : 0.12]; }),
+        'ORN-GRACE':   [[r4 - 1, 0.15], [r4, 1], [r4 + 3, 0.15], [r4 + 4, 1], [r4 + 6, 0.15], [r4 + 7, 1.5]]   // ½ ton dessous → 1, ♭3→3, ♭5→5
+      };
+      if (ORN[st.fam]) return ORN[st.fam].map(function (x) {
+        var m = x[0], iv = ((m - r4) % 12 + 12) % 12;
+        return { _noteOnly: { note: NO[m % 12], octave: Math.floor(m / 12) - 1, fn: iv === 0 ? 'tonic' : (iv === 4 ? 'mediant' : (iv === 7 ? 'dominant' : 'extension')) }, _dur: x[1] };
+      });
+    }
     if (cat === 'CAT05' && RUNS05[st.fam]) {
       var tr05 = (typeof selectedRoot !== 'undefined' && selectedRoot) ? selectedRoot : 'C';
       var N05 = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'], r05 = N05.indexOf(tr05); if (r05 < 0) r05 = 0;
