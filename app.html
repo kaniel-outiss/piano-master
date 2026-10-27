@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ══ Permission Policy : autorise Web MIDI API sur Chrome Android / WebView ══ -->
     <meta http-equiv="Permissions-Policy" content="midi=(*), midi-sysex=(*)">
-    <title>Piano Master v86 — MIDI Edition</title>
+    <title>Piano Master v87 — MIDI Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -5415,6 +5415,7 @@ const PREREQS = {
   'LICK-POS':    { niveau:4, prereqs:['CAD-II-V-I'], icc:3 },
   'LICK-BERG':   { niveau:4, prereqs:['CAD-II-V-I'], icc:3 },
   'LICK-GOS':    { niveau:2, prereqs:['SCL-PENTA-M'], icc:3 },
+  'LICK-RUN':    { niveau:4, prereqs:['CAD-II-V-I'], icc:3 },
   'MOD-DORIEN':  { niveau:4, prereqs:['CAD-II-V-Im','SCL-MIN-N'], icc:2 },
   'MOD-LYDIEN':  { niveau:4, prereqs:['MOD-MIXO'], icc:2 },
   'MOD-bVI':     { niveau:4, prereqs:['PASS-bVI'], icc:2 },
@@ -49681,6 +49682,11 @@ function srPrePopuler() {
     {key:'LICK-GOS-ENC',   label:'Lick gospel encerclement'},
     {key:'LICK-GOS-AMEN',  label:'Lick gospel amen IV-I'},
     {key:'LICK-GOS-CHROM', label:'Lick gospel montée chrom.'},
+    {key:'LICK-RUN-DIM',   label:'Run diminué sur V7'},
+    {key:'LICK-RUN-DIAT',  label:'Run diatonique 3-5-3-2-1'},
+    {key:'LICK-RUN-ALT',   label:'Run altéré V7 → I'},
+    {key:'LICK-RUN-ARP',   label:'Run arpège + encerclements'},
+    {key:'LICK-RUN-2M',    label:'Run deux mains ♭9-♯9'},
   ];
   const cat05v2 = srLoad('CAT05');
   const cat05NeedsLicks = LICK_TYPES.some(t => !cat05v2.some(sk => sk.id.indexOf(t.key + '-') === 0));
@@ -50757,7 +50763,7 @@ window.RC_COLORS_PUB      = RC_COLORS;
     CAT01:['SCL-MAJ','SCL-MIN-N','SCL-MIN-H','SCL-MIN-M','SCL-PENTA-M','SCL-PENTA-m','SCL-BLUES'],
     CAT02:['ARP-MAJ-MD','ARP-MAJ-MG','ARP-MAJ-2M','ARP-MIN-MD','ARP-MIN-MG','ARP-MIN-2M','ARP-MAJ7-MD','ARP-M7-MD','ARP-DOM7-MD','ARP-DIM7-MD','ARP-MAJ7-MG','ARP-M7-MG','ARP-DOM7-MG','ARP-DIM7-MG','ARP-MAJ7-2M','ARP-M7-2M','ARP-DOM7-2M','ARP-DIM7-2M'],
     CAT04:['ACC-MAJOR','ACC-MINOR','ACC-SUS4','ACC-AUG','ACC-DIM','ACC-MAJ7','ACC-M7','ACC-7','ACC-DIM7','ACC-M7B5','ACC-MAJOR-FOND','ACC-MAJOR-INV1','ACC-MAJOR-INV2','ACC-MINOR-FOND','ACC-MINOR-INV1','ACC-MINOR-INV2','ACC-DIAT-MAJ','ACC-DIAT-MIN','ACC-DIAT-MAJ7','ACC-DIAT-MIN7','ACC-DIAT-MAJ-PROG','ACC-DIAT-MIN-PROG'],
-    CAT05:['FILL-PENTA-R','FILL-CHROM-R','FILL-GOSPEL-2','FILL-TURN','FILL-APP-CHR','FILL-LICK','LICK-POS-BLUES','LICK-POS-PENT','LICK-POS-DOR','LICK-BERG-251','LICK-GOS-DESC','LICK-GOS-ENC','LICK-GOS-AMEN','LICK-GOS-CHROM'],
+    CAT05:['FILL-PENTA-R','FILL-CHROM-R','FILL-GOSPEL-2','FILL-TURN','FILL-APP-CHR','FILL-LICK','LICK-POS-BLUES','LICK-POS-PENT','LICK-POS-DOR','LICK-BERG-251','LICK-GOS-DESC','LICK-GOS-ENC','LICK-GOS-AMEN','LICK-GOS-CHROM','LICK-RUN-DIM','LICK-RUN-DIAT','LICK-RUN-ALT','LICK-RUN-ARP','LICK-RUN-2M'],
     CAT06:['CAD-II-V-I','CAD-IV-I','CAD-bVII-I','CAD-IV-V-I','CAD-I-IV','CAD-VI-IV','CAD-I-bVII-IV','CAD-PLAGALE','CAD-AMEN','CAD-GOSPEL-TRAD','CAD-DECEPTIVE'],
     CAT07:['MG-BASS-5','MG-BASS-WALK','MG-BASS-OCT','MG-COMP-BASE','MG-COMP-SYNC','MG-STRIDE','MG-BASS-SHELL','MG-BASS-ROOTS','MG-158','MG-138','MG-B78','MG-1358'],
     CAT08:['VC-CLOSE','VC-OPEN','VC-DROP2','VC-DROP3','VC-SHELL','VC-ROOTLESS','VC-GOSPEL','VC-QUARTAL','VC-SOWHAT','VC-DROP24','VOI-ISLAND','VOI-DESC-ROOTLESS-A-7-MD','VOI-DESC-ROOTLESS-A-7-MG','VOI-DESC-ROOTLESS-A-7-MGMD','VOI-DESC-ROOTLESS-A-9-MD','VOI-DESC-ROOTLESS-A-9-MG','VOI-DESC-ROOTLESS-A-9-MGMD','VOI-DESC-ROOTLESS-B-7-MD','VOI-DESC-ROOTLESS-B-7-MG','VOI-DESC-ROOTLESS-B-7-MGMD','VOI-DESC-ROOTLESS-B-9-MD','VOI-DESC-ROOTLESS-B-9-MG','VOI-DESC-ROOTLESS-B-9-MGMD','VOI-DESC-DROP2-7-MD','VOI-DESC-DROP2-7-MG','VOI-DESC-DROP2-7-MGMD','VOI-DESC-DROP2-9-MD','VOI-DESC-DROP2-9-MG','VOI-DESC-DROP2-9-MGMD','VOI-DESC-DROP3-7-MD','VOI-DESC-DROP3-7-MG','VOI-DESC-DROP3-7-MGMD','VOI-DESC-DROP3-9-MD','VOI-DESC-DROP3-9-MG','VOI-DESC-DROP3-9-MGMD','VOI-DESC-SHELL-7-MD','VOI-DESC-SHELL-7-MG','VOI-DESC-SHELL-7-MGMD','VOI-DESC-SHELL-9-MD','VOI-DESC-SHELL-9-MG','VOI-DESC-SHELL-9-MGMD','VOI-DESC-QUARTAL-7-MD','VOI-DESC-QUARTAL-7-MG','VOI-DESC-QUARTAL-7-MGMD','VOI-DESC-QUARTAL-9-MD','VOI-DESC-QUARTAL-9-MG','VOI-DESC-QUARTAL-9-MGMD','VOI-DESC-SOWHAT-7-MD','VOI-DESC-SOWHAT-7-MG','VOI-DESC-SOWHAT-7-MGMD','VOI-DESC-SOWHAT-9-MD','VOI-DESC-SOWHAT-9-MG','VOI-DESC-SOWHAT-9-MGMD','VOI-DESC-SPREAD-7-MD','VOI-DESC-SPREAD-7-MG','VOI-DESC-SPREAD-7-MGMD','VOI-DESC-SPREAD-9-MD','VOI-DESC-SPREAD-9-MG','VOI-DESC-SPREAD-9-MGMD','VOI-DESC-OPEN-7-MD','VOI-DESC-OPEN-7-MG','VOI-DESC-OPEN-7-MGMD','VOI-DESC-OPEN-9-MD','VOI-DESC-OPEN-9-MG','VOI-DESC-OPEN-9-MGMD','VOI-DESC-CLUSTER-7-MD','VOI-DESC-CLUSTER-7-MG','VOI-DESC-CLUSTER-7-MGMD','VOI-DESC-CLUSTER-9-MD','VOI-DESC-CLUSTER-9-MG','VOI-DESC-CLUSTER-9-MGMD'],
@@ -50891,6 +50897,11 @@ function rtRendreRepsTab() {
       {key:'LICK-GOS-ENC',   label:'Encercl. 3ce',  emoji:'✝️' },
       {key:'LICK-GOS-AMEN',  label:'Amen IV-I',     emoji:'✝️' },
       {key:'LICK-GOS-CHROM', label:'Montée chrom.', emoji:'✝️' },
+      {key:'LICK-RUN-DIM',   label:'Run dim.',      emoji:'🏃' },
+      {key:'LICK-RUN-DIAT',  label:'Run diat.',     emoji:'🏃' },
+      {key:'LICK-RUN-ALT',   label:'Run altéré',    emoji:'🏃' },
+      {key:'LICK-RUN-ARP',   label:'Run arp.+enc.', emoji:'🏃' },
+      {key:'LICK-RUN-2M',    label:'Run 2 mains',   emoji:'🏃' },
     ],
     CAT15: [
       {key:'RH-SUBV7',   label:'SubV7',     emoji:'⚡' },
@@ -52826,6 +52837,12 @@ window._repsGetDesc = (function() {
     'LICK-GOS-AMEN': { what:'Lick gospel « amen » IV → I : descente 6-5-4-3-2 sur l\'accord de IV, arrivée sur la tonique au retour sur I.', how:'<b>Sur IV</b> (Fa en Do) la descente passe par la tierce de I : la résolution est déjà dans la ligne. Termine tenu.<br><b>Taubman:</b> Taubman: descente conjointe - le bras glisse vers la gauche, les doigts restent souples.', why:'La cadence plagale « amen » est la signature du gospel : ce lick la chante à la main droite.' },
     'LICK-GOS-CHROM': { what:'Lick gospel « montée chromatique de fin » : 5-♭6-6-♭7-7-8 sur V → I.', how:'<b>Doigté chromatique</b> 1-3 / 1-2-3 : pouce sur les blanches, 3 sur les noires. Ralentis à peine sur la dernière note.<br><b>Taubman:</b> Taubman: pouce sur les blanches, 3 sur les noires - le poignet monte et descend avec les touches noires.', why:'La montée chromatique est la fin de section par excellence : elle « pousse » vers la tonique.' },
 
+    'LICK-RUN-DIM': { what:'Run diminué sur le V7 : quatre notes du dim7 (♭9-♭7-5-3 du dominant), puis une petite descente A♭-G♭-F-E♭-D♭ (en Fa) qui tourne vers l\'octave suivante. La cellule de 10 notes se répète une octave plus bas.', how:'<b>Doigté 4-3-2-1 · 3-2-1 · 3-2-1.</b> D\'abord une seule octave, puis la jonction entre deux octaves sans accroc. Doubles-croches régulières avant d\'accélérer.<br><b>Taubman:</b> Taubman: chaque groupe 3-2-1 est une forme - le bras descend d\'un bloc, le pouce ne passe jamais dessous.', why:'Le dim7 coupe l\'octave en quatre tierces mineures : la même cellule sonne sur quatre dominants à une tierce mineure (G7, E7, D♭7, B♭7). Trois cellules suffisent pour les douze tonalités.' },
+    'LICK-RUN-DIAT': { what:'Run diatonique : la forme 3-5-3-2-1 de la gamme, puis la même un degré plus bas (7-2-7-6-5), répétée d\'octave en octave.', how:'<b>Doigté 3-5-3-2-1 pour les deux formes.</b> Le passage délicat : du pouce (1) au 3 sur la forme suivante. Uniquement des notes de la tonalité.<br><b>Taubman:</b> Taubman: le saut du pouce au 3e doigt se fait par un deplacement lateral du bras, pas par une extension.', why:'Rien de chromatique : le run sonne sur tout accord de la tonalité. Sur IV la 7e devient un ♯11, sur ii les notes deviennent 9 et 11.' },
+    'LICK-RUN-ALT': { what:'Run altéré : sur G7(♯9♭13), les notes du haut de l\'accord (♭13-3-♯9-♭9) descendent d\'octave en octave puis résolvent sur I.', how:'<b>Pose l\'accord d\'abord</b> et écoute-le. Puis la descente, sans précipiter. Résous en majeur et en mineur.<br><b>Taubman:</b> Taubman: quatre notes, une forme - le poignet reste souple au changement d\'octave.', why:'♯9, ♭9 et ♭13 sont les tensions les plus fortes d\'un dominant : le ♭9 et le ♭13 sont à un demi-ton des notes de I, d\'où la résolution qui « tire ».' },
+    'LICK-RUN-ARP': { what:'Run arpège + encerclements sur ii–V–I : Dm7 arpégé depuis sa 7e, puis chaque note de G7 (B, D, F) encerclée par la note du dessus et le demi-ton du dessous, arrivée sur la 3ce de C.', how:'<b>La note cible tombe sur le temps.</b> Travaille d\'abord l\'encerclement d\'une seule note, puis des trois. Métronome obligatoire.<br><b>Taubman:</b> Taubman: approche et cible dans la meme position de main - pas d\'extension pour le demi-ton.', why:'Partir de la 7e donne une direction à l\'arpège ; l\'encerclement fait entendre l\'accord sans le jouer. Vocabulaire bebop de base.' },
+    'LICK-RUN-2M': { what:'Run deux mains sur V7 : la MG glisse du ♭9 au ♯9 (A♭-B♭ sur G7), la MD répond avec 3-5-13-1 (B-D-E-G), et le bloc monte d\'octave en octave.', how:'<b>Mains séparées d\'abord</b>, puis ensemble très lentement : on ne doit pas entendre où une main s\'arrête. Compte 2 + 4, en sextolets.<br><b>Taubman:</b> Taubman: les deux mains bougent comme une seule unite - le bras porte la forme d\'une octave a l\'autre.', why:'Chaque main ne joue qu\'une petite forme, mais l\'alternance tension/détente donne un run rapide et complexe. A♭-B-D appartiennent au dim7 : lien direct avec le run diminué.' },
+
     /* CAT15 — Réharmonisation */
     'RH-SUBV7':   { what:'Réharmonisation par SubV7 : remplacer le V7 par le dom7 à distance de triton. En Do : G7 → D♭7.', how:'<b>Contexte :</b> II–V–I devient IIm7 – D♭7 – Imaj7. <b>Vérifier :</b> les guide-tones sont les mêmes (Si♮ et Fa). <b>Effet :</b> basse qui descend chromatiquement.<br><b>Taubman:</b> Taubman: bemols frequents - mouvements in anticipes.', why:'Moody Tritone Handbook. Outil du reharm gospel jazz sophistiqué. À intégrer progressivement dans les vamps.' },
     'RH-bVI':     { what:'Réharmonisation par ♭VI : remplacer le I par ♭VImaj7 pour créer une couleur chromatique.', how:'<b>En Do :</b> Cmaj7 → A♭maj7 (même fonction de résolution). <b>Usage :</b> sur un temps long, changer le I par ♭VI pour varier la couleur sans changer la tonalité.', why:'Hillsong, CCM contemplatif. Dericq T2 : emprunts modaux. Couleur cinématique très efficace à ICC.' },
@@ -53145,6 +53162,11 @@ var PROG={
   'LICK-GOS-ENC':  [{s:0,ct:'major',lbl:'I'}],
   'LICK-GOS-AMEN': [{s:5,ct:'major',lbl:'IV'},{s:0,ct:'major',lbl:'I'}],
   'LICK-GOS-CHROM':[{s:7,ct:'7',lbl:'V'},{s:0,ct:'major',lbl:'I'}],
+  'LICK-RUN-DIM':  [{s:7,ct:'7',lbl:'V'},{s:0,ct:'maj7',lbl:'I'}],
+  'LICK-RUN-DIAT': [{s:0,ct:'maj7',lbl:'I'}],
+  'LICK-RUN-ALT':  [{s:7,ct:'7',lbl:'V alt'},{s:0,ct:'maj7',lbl:'I'}],
+  'LICK-RUN-ARP':  [{s:2,ct:'m7',lbl:'ii'},{s:7,ct:'7',lbl:'V'},{s:0,ct:'maj7',lbl:'I'}],
+  'LICK-RUN-2M':   [{s:7,ct:'7',lbl:'V'},{s:0,ct:'maj7',lbl:'I'}],
 
   /* CAT15 — Réharmonisation */
   'RH-SUBV7':    [{s:0,ct:'maj7',lbl:'I'},{s:1,ct:'7',   lbl:'♭II'},{s:0,ct:'maj7',lbl:'I'}],
@@ -54954,7 +54976,7 @@ window.rvSyncExpanded = function() {
           var pc = _RV_PC[n.note]; if (pc == null) return null;
           var fn = n.fn || n['function'] || 'tonic';
           var col = step < 0 ? (_RV_FN_COL[fn] || '#E8ECF5') : (i === step ? '#F5C842' : (i < step ? '#3ECF8E' : '#E8ECF5'));
-          return { m: (n.octave + 1) * 12 + pc, col: col };
+          return { m: (n.octave + 1) * 12 + pc, col: col, hand: (p._stf && p._stf.hand) || undefined };
         }).filter(Boolean);
         if (!notes.length) return;
         var lb = (!p._noteOnly && p.lbl) ? String(p.lbl).split('\n')[0] : (p._stf ? p._stf.lb : null);
@@ -55259,7 +55281,9 @@ window.rvFillPanel=function(skillId){
       'FILL-APP-CHR':'Approche chrom.','FILL-LICK':'Lick fin section',
       'LICK-POS-BLUES':'Lick positions blues','LICK-POS-PENT':'Lick positions penta','LICK-POS-DOR':'Lick positions dorien',
       'LICK-BERG-251':'Lick Bergonzi ii-V-I','LICK-GOS-DESC':'Lick gospel descente blues','LICK-GOS-ENC':'Lick gospel encerclement',
-      'LICK-GOS-AMEN':'Lick gospel amen IV-I','LICK-GOS-CHROM':'Lick gospel montée chrom.'
+      'LICK-GOS-AMEN':'Lick gospel amen IV-I','LICK-GOS-CHROM':'Lick gospel montée chrom.',
+      'LICK-RUN-DIM':'Run diminué sur V7','LICK-RUN-DIAT':'Run diatonique 3-5-3-2-1','LICK-RUN-ALT':'Run altéré V7 → I',
+      'LICK-RUN-ARP':'Run arpège + encerclements','LICK-RUN-2M':'Run deux mains ♭9-♯9'
     };
     var cid05='rvFill_cat05';
     el.innerHTML='<div style="margin-bottom:6px">'
@@ -57284,6 +57308,26 @@ function lkParse(txt) {
   });
   return { notes: notes, chords: chords, err: err };
 }
+/* v87 — 🏃 Runs : 5 cellules de runs (d'après la fiche « 5 Piano Runs », N. Tenenbaum / Complete Piano Method).
+   On encode les cellules (notes, doigtés, logique harmonique) ramenées à un ii–V–I en Do — pas le document. */
+const LK_S = 1 / 6;
+const LK_RUNS = [
+  { name: 'Run 1 · diminué sur V7', chords: [{ sym: 'G7', r: 7, at: 0 }, { sym: 'Cmaj7', r: 0, at: 5 }],
+    n: [80,77,74,71,70,68,67,65,63,64, 68,65,62,59,58,56,55,53,51,52].map(function (m) { return [m, .25]; }).concat([[48, 2]]),
+    info: 'G♯ F D B = dim7 sur G7 (♭9-♭7-5-3), puis A♭ G♭ F E♭ D♭→D · doigté 4321 · 321 · 321 · la même cellule sert G7, E7, D♭7, B♭7' },
+  { name: 'Run 2 · diatonique 3-5-3-2-1', chords: [{ sym: 'Cmaj7', r: 0, at: 0 }],
+    n: [76,79,76,74,72,71,74,71,69,67, 64,67,64,62,60,59,62,59,57,55].map(function (m) { return [m, .25]; }).concat([[48, 2]]),
+    info: 'forme 3-5-3-2-1 puis la même un degré plus bas (7-2-7-6-5) · doigté 3 5 3 2 1 pour les deux · marche aussi sur IV (♯11) et ii' },
+  { name: 'Run 3 · altéré G7(♯9♭13) → C', chords: [{ sym: 'G7(♯9♭13)', r: 7, at: 0 }, { sym: 'Cmaj9', r: 0, at: 2 }],
+    n: [[75,.25],[71,.25],[70,.25],[68,.25],[63,.25],[59,.25],[58,.25],[56,.25],[55,2]],
+    info: '♭13-3-♯9-♭9 en descente d\'octave (gamme demi-ton/ton) · le ♭9 tombe sur la quinte de I · résous aussi en mineur' },
+  { name: 'Run 4 · arpège depuis la 7e + encerclements', chords: [{ sym: 'Dm7', r: 2, at: 0 }, { sym: 'G7', r: 7, at: 2 }, { sym: 'Cmaj7', r: 0, at: 5 }],
+    n: [[60,.5],[62,.5],[65,.5],[69,.5], [72,.25],[71,.25],[70,.25],[71,.25],[76,.25],[74,.25],[73,.25],[74,.25],[79,.25],[77,.25],[76,.25],[77,.25], [76,2]],
+    info: 'Dm7 arpégé depuis sa 7e (C D F A) · sur G7 chaque note de l\'accord (B, D, F) encerclée : dessus, demi-ton dessous, cible · arrivée sur la 3ce de C' },
+  { name: 'Run 5 · deux mains ♭9-♯9 + accord', chords: [{ sym: 'G7', r: 7, at: 0 }, { sym: 'Cmaj7', r: 0, at: 3 }],
+    n: [44,46,47,50,52,55, 56,58,59,62,64,67, 68,70,71,74,76,79].map(function (m) { return [m, LK_S]; }).concat([[76, 2]]),
+    info: 'MG : A♭ B♭ (♭9 → ♯9) · MD : B D E G (3-5-13-1) · compte 2 + 4 · monte d\'un bloc par octave · A♭ B D = le dim7 du run 1' }
+].map(function (g) { return { name: g.name, src: 'runs', chords: g.chords, notes: g.n.map(function (x) { return { m: x[0], d: x[1] }; }), info: g.info }; });
 function lkUserList() { try { return JSON.parse(localStorage.getItem('pm_licks_user') || '[]'); } catch (e) { return []; } }
 function lkUserSave(L) { try { localStorage.setItem('pm_licks_user', JSON.stringify(L)); } catch (e) {} }
 // ── État ───────────────────────────────────────────────────────────────
@@ -57297,6 +57341,7 @@ function lkList() {
   if (LK.src === 'pos') return [0, 1, 2, 3, 4, 5].map(function (i) { return lkGenPositions(LK.seed + i); });
   if (LK.src === 'berg') return [0, 1, 2, 3].map(function (i) { return lkGenBergonzi(LK.seed + i); });
   if (LK.src === 'gospel') return LK_GOSPEL;
+  if (LK.src === 'runs') return LK_RUNS;
   return lkUserList().map(function (u) { const P = lkParse(u.text); return { name: u.name, src: 'user', chords: P.chords, notes: P.notes, info: 'mon lick' }; });
 }
 function lkKey() { try { if (typeof selectedRoot !== 'undefined' && PM_STF_PC[selectedRoot] != null) return PM_STF_PC[selectedRoot]; } catch (e) {} return 0; }
@@ -57363,16 +57408,28 @@ function lkStaff(L) {
   let beat = 0, bg = 0, lastGrp = null;
   const cols = L.notes.map(function (n, i) {
     const b0 = beat; beat += n.d;
-    const tri = Math.abs(n.d - LK_T) < 1e-6, short = n.d < 1 - 1e-6;
-    const g = short ? (tri ? 't' : 'e') + Math.floor(b0 + 1e-6) : null;
+    const tri = Math.abs(n.d - LK_T) < 1e-6, sx = Math.abs(n.d - 1 / 6) < 1e-6, short = n.d < 1 - 1e-6;
+    const g = short ? (tri ? 't' : (sx ? 's' : 'e')) + Math.floor(b0 + 1e-6) : null;
     if (g && g !== lastGrp) bg++; lastGrp = g;
     let lb = null; L.chords.forEach(function (c) { if (Math.abs(c.at - b0) < 1e-6) lb = c.sym; });
     const on = i === (LK.ctrl ? LK.ptr : LK.cur), bad = LK.ctrl && i === LK.bad;
     return { notes: [{ m: n.m + sh, col: bad ? '#EF4444' : (on ? '#F5C842' : (L.pos ? lkPosCol(L, i) : '#E8ECF5')) }],
-             lb: lb ? lkTransSym(lb, sh) : null, bg: g ? bg : undefined, tup: tri ? '3' : undefined, bm: n.d <= .25 + 1e-6 ? 2 : 1,
+             lb: lb ? lkTransSym(lb, sh) : null, bg: g ? bg : undefined, tup: tri ? '3' : (sx ? '6' : undefined), bm: n.d <= .25 + 1e-6 ? 2 : 1,
              dur: n.d >= 4 ? 'w' : (n.d >= 2 ? 'h' : undefined), wf: 0.62 };
   });
+  const HH = lkHands(cols.map(function (c) { return c.notes[0].m; }), cols.map(function (c) { return c.bg; }));
+  cols.forEach(function (c, i) { if (HH[i]) c.notes[0].hand = HH[i]; });
   return pmStfDraw(cols, { sp: 9, key: key, scale: 1.35, carry: true });
+}
+/* v87 — main (portée) par groupe de ligature : un groupe reste sur une seule portée
+   (sinon la ligature se casse et une double-croche isolée ressemble à une noire) ;
+   rien si tout le lick tient dans une clé */
+function lkHands(ms, gs) {
+  const mn = Math.min.apply(null, ms), mx = Math.max.apply(null, ms);
+  if (mn >= 55 || mx <= 64) return ms.map(function () { return undefined; });
+  const S = {}, N = {};
+  ms.forEach(function (m, i) { const k = gs[i] != null ? 'g' + gs[i] : 'n' + i; S[k] = (S[k] || 0) + m; N[k] = (N[k] || 0) + 1; });
+  return ms.map(function (m, i) { const k = gs[i] != null ? 'g' + gs[i] : 'n' + i; return S[k] / N[k] < 60 ? 'MG' : 'MD'; });
 }
 function lkPosCol(L, i) { const P = L.pos.filter(function (p) { return i >= p.i0 && i <= p.i1; })[0]; return P ? ['#3ECF8E', '#4F9EFF', '#C07DFF', '#F59E0B', '#FF6B9D'][L.pos.indexOf(P) % 5] : '#E8ECF5'; }
 function lkTransSym(sym, sh) {
@@ -57399,7 +57456,7 @@ function lkPosRow(L) {
 function lkRender() {
   const body = document.getElementById('body-licks'); if (!body) return;
   const L = lkCur(), Ls = lkList();
-  const src = [['pos', '🧩 Positions'], ['berg', '📐 Bergonzi'], ['gospel', '✝️ Gospel'], ['user', '✍️ Mes licks']];
+  const src = [['pos', '🧩 Positions'], ['berg', '📐 Bergonzi'], ['gospel', '✝️ Gospel'], ['runs', '🏃 Runs'], ['user', '✍️ Mes licks']];
   body.innerHTML =
     '<div style="display:flex;flex-direction:column;height:100%;padding:10px 14px;gap:6px;box-sizing:border-box;overflow:hidden">'
     + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
@@ -57459,7 +57516,12 @@ const LK_SKILLS = {
   'LICK-GOS-DESC':  function () { return LK_GOSPEL[0]; },        // descente blues
   'LICK-GOS-ENC':   function () { return LK_GOSPEL[2]; },        // encerclement de la tierce
   'LICK-GOS-AMEN':  function () { return LK_GOSPEL[3]; },        // amen IV → I
-  'LICK-GOS-CHROM': function () { return LK_GOSPEL[6]; }         // montée chromatique de fin
+  'LICK-GOS-CHROM': function () { return LK_GOSPEL[6]; },        // montée chromatique de fin
+  'LICK-RUN-DIM':   function () { return LK_RUNS[0]; },          // v87 — runs
+  'LICK-RUN-DIAT':  function () { return LK_RUNS[1]; },
+  'LICK-RUN-ALT':   function () { return LK_RUNS[2]; },
+  'LICK-RUN-ARP':   function () { return LK_RUNS[3]; },
+  'LICK-RUN-2M':    function () { return LK_RUNS[4]; }
 };
 function lkSkillLick(fam) { const f = LK_SKILLS[fam]; return f ? f() : null; }
 // séquence de démo / portée : notes, durées (en temps), groupes de ligature, accords
@@ -57468,15 +57530,18 @@ function lkSkillSeq(fam, rootName) {
   let r = PM_STF_PC[rootName]; if (r == null) r = 0;
   const sh = r > 6 ? r - 12 : r;
   let beat = 0, bg = 0, last = null;
-  return L.notes.map(function (n) {
+  const out = L.notes.map(function (n) {
     const b0 = beat; beat += n.d;
-    const tri = Math.abs(n.d - LK_T) < 1e-6, g = n.d < 1 - 1e-6 ? (tri ? 't' : 'e') + Math.floor(b0 + 1e-6) : null;
+    const tri = Math.abs(n.d - LK_T) < 1e-6, sx = Math.abs(n.d - 1 / 6) < 1e-6, g = n.d < 1 - 1e-6 ? (tri ? 't' : (sx ? 's' : 'e')) + Math.floor(b0 + 1e-6) : null;
     if (g && g !== last) bg++; last = g;
     let lb = null; L.chords.forEach(function (c) { if (Math.abs(c.at - b0) < 1e-6) lb = c.sym; });
     const m = n.m + sh, iv = ((n.m % 12) + 12) % 12;
     return { _noteOnly: { note: PM_NNS[((m % 12) + 12) % 12], octave: Math.floor(m / 12) - 1, fn: iv === 0 ? 'tonic' : (iv === 4 ? 'mediant' : (iv === 7 ? 'dominant' : 'extension')) },
-             _dur: n.d, _stf: { bg: g ? bg : undefined, tup: tri ? '3' : undefined, bm: n.d <= .25 + 1e-6 ? 2 : 1, dur: n.d >= 4 ? 'w' : (n.d >= 2 ? 'h' : undefined), lb: lb ? lkTransSym(lb, sh) : null } };
+             _dur: n.d, _stf: { bg: g ? bg : undefined, tup: tri ? '3' : (sx ? '6' : undefined), bm: n.d <= .25 + 1e-6 ? 2 : 1, dur: n.d >= 4 ? 'w' : (n.d >= 2 ? 'h' : undefined), lb: lb ? lkTransSym(lb, sh) : null } };
   });
+  const HH = lkHands(L.notes.map(function (n) { return n.m + sh; }), out.map(function (p) { return p._stf.bg; }));
+  out.forEach(function (p, i) { p._stf.hand = HH[i]; });
+  return out;
 }
 
 /* v86 — licks relevés dans la vidéo « Piano Runs, Licks and Riffs for Jazz and Gospel » (transcription perso,
